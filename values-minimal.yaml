@@ -1,0 +1,53 @@
+# Minimal values file for webrix-helm chart
+# This file contains only the essential settings for a basic installation
+
+# Global configuration
+global:
+  # Database provider: "postgresql" for in-cluster db, or "external" for external db
+  db_provider: "postgresql"
+  
+  # Domain configuration
+  domain:
+    host: "webrix.local"
+
+# Application deployments - enable only the services you need
+deployments:
+  # Webrix App service
+  app:
+    enabled: true
+    ingress:
+      enabled: true
+
+  # Webrix Connect service  
+  connect:
+    enabled: true
+    ingress:
+      enabled: true
+
+  # Webrix Run service
+  run:
+    enabled: true
+    ingress:
+      enabled: true
+
+  dbService:
+    enabled: true
+
+# PostgreSQL configuration (only used if db_provider is "postgresql")
+postgresql:
+  enabled: true
+  auth:
+    postgresPassword: "webrix123"
+    database: "webrix"
+  primary:
+    persistence:
+      enabled: true
+      size: 8Gi
+
+# Ingress configuration
+ingress:
+  enabled: true
+  className: "nginx"
+  tls:
+    enabled: true
+    secretName: "webrix-tls"

@@ -1,0 +1,53 @@
+{{- range $serviceName, $serviceConfig := .Values.deployments }}
+{{- if $serviceConfig.enabled }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $serviceName | lower }}
+  namespace: {{ $.Release.Namespace }}
+  labels:
+    {{- include "webrix.deploymentLabels" (dict "serviceName" $serviceName "Values" $.Values "Release" $.Release "Chart" $.Chart) | nindent 4 }}
+spec:
+  replicas: {{ $serviceConfig.replicas | default 1 }}
+  selector:
+    matchLabels:
+      {{- include "webrix.serviceSelectorLabels" (dict "serviceName" $serviceName "root" $) | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "webrix.podLabels" (dict "serviceName" $serviceName "podLabels" $serviceConfig.podLabels "root" $) | nindent 8 }}
+      annotations:
+        checksum/configmap: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+        {{- include "webrix.podAnnotations" (dict "podAnnotations" $serviceConfig.podAnnotations "root" $) | nindent 8 }}
+    spec:
+      serviceAccountName: {{ printf "%s-sa" $serviceName | lower }}
+      containers:
+        - name: {{ $serviceName | lower }}
+          image: "{{ $serviceConfig.image.repository }}:{{ $serviceConfig.image.tag }}"
+          imagePullPolicy: {{ $serviceConfig.image.pullPolicy | default "ifnotpresent" }}
+          ports:
+            - name: http
+              containerPort: {{ $serviceConfig.service.targetPort | default 3000 }}
+              protocol: TCP
+          envFrom:
+            - configMapRef:
+                name: {{ printf "%s-config" $serviceName | lower }}
+            - secretRef:
+                name: {{ printf "%s-secret" $serviceName | lower }}
+          resources:
+            {{- toYaml ($serviceConfig.resources | default (dict "requests" (dict "cpu" "100m" "memory" "200Mi") "limits" (dict "cpu" "1000m" "memory" "2048Mi"))) | nindent 12 }}
+          {{- with $serviceConfig.nodeSelector }}
+          nodeSelector:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with $serviceConfig.affinity }}
+          affinity:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with $serviceConfig.tolerations }}
+          tolerations:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+{{- end }}
+{{- end }}

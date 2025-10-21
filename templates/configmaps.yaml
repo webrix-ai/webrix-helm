@@ -1,0 +1,27 @@
+{{- range $serviceName, $serviceConfig := .Values.deployments }}
+{{- if $serviceConfig.enabled }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ printf "%s-config" $serviceName | lower }}
+  namespace: {{ $.Release.Namespace }}
+  labels:
+    {{- include "webrix.labels" $ | nindent 4 }}
+    app: {{ $serviceName }}
+data:
+  {{- range $key, $value := $serviceConfig.env }}
+  {{ $key }}: {{ $value | quote }}
+  {{- end }}
+  {{- range $key, $value := $.Values.sharedEnv }}
+  {{ $key }}: {{ $value | quote }}
+  {{- end }}
+  {{- range $key, $value := $serviceConfig.extraEnv }}
+  {{- if and (eq $key "DATABASE_URL") (eq $serviceName "dbService") }}
+  {{ $key }}: {{ include "webrix.databaseUrl" $ | quote }}
+  {{- else }}
+  {{ $key }}: {{ $value | quote }}
+  {{- end }}
+  {{- end }}
+{{- end }}
+{{- end }}
