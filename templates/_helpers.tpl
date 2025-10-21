@@ -9,6 +9,7 @@ app.kubernetes.io/managed-by: {{ .Release.Service }}
 {{- with .Values.global.labels }}
 {{ toYaml . }}
 {{- end }}
+{{- end }}
 
 
 {{/*
