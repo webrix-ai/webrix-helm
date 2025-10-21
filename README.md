@@ -104,7 +104,7 @@ externalDatabase:
 ingress:
   enabled: true
   className: "nginx"
-  host: "mcp-s.com"
+  host: "webrix.local"
   annotations:
     nginx.ingress.kubernetes.io/rewrite-target: /
 

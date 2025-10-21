@@ -18,7 +18,7 @@ spec:
       labels:
         {{- include "webrix.podLabels" (dict "serviceName" $serviceName "podLabels" $serviceConfig.podLabels "root" $) | nindent 8 }}
       annotations:
-        checksum/configmap: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+        checksum/configmap: {{ include (print $.Template.BasePath "/configmaps.yaml") $ | sha256sum }}
         {{- include "webrix.podAnnotations" (dict "podAnnotations" $serviceConfig.podAnnotations "root" $) | nindent 8 }}
     spec:
       serviceAccountName: {{ printf "%s-sa" $serviceName | lower }}

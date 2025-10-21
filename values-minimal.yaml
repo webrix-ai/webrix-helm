@@ -17,6 +17,9 @@ deployments:
     enabled: true
     ingress:
       enabled: true
+    env:
+      # NextAuth.js trusted hosts (not in main values.yaml)
+      AUTH_TRUST_HOST: "true"
 
   # Webrix Connect service  
   connect:
@@ -42,12 +45,12 @@ postgresql:
   primary:
     persistence:
       enabled: true
-      size: 8Gi
+      size: 2Gi
 
 # Ingress configuration
 ingress:
   enabled: true
   className: "nginx"
   tls:
-    enabled: true
+    enabled: false
     secretName: "webrix-tls"
