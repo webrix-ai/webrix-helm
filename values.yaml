@@ -18,17 +18,14 @@ global:
 
 # Application deployments configuration
 deployments:
-  # MCP-S App service
   app:
     enabled: true
     replicas: 1
     image:
       repository: "quay.io/idan-chetrit/mcp-s-app"
       tag: "latest"
-      pullPolicy: "IfNotPresent"
     
     service:
-      type: ClusterIP
       port: 80
       targetPort: 3000
     
@@ -62,22 +59,19 @@ deployments:
       className: "nginx"
       annotations:
         nginx.ingress.kubernetes.io/rewrite-target: /
-      subdomain: "app"
+      subdomain: "webrix-app"
       path: "/"
       pathType: "Prefix"
       tls: []
 
-  # MCP-S Connect service
   connect:
     enabled: true
     replicas: 1
     image:
       repository: "quay.io/idan-chetrit/mcp-s-connect"
       tag: "latest"
-      pullPolicy: "IfNotPresent"
     
     service:
-      type: ClusterIP
       port: 80
       targetPort: 3000
     
@@ -112,22 +106,19 @@ deployments:
       className: "nginx"
       annotations:
         nginx.ingress.kubernetes.io/rewrite-target: /
-      subdomain: "connect"
+      subdomain: "webrix-connect"
       path: "/"
       pathType: "Prefix"
       tls: []
 
-  # MCP-S Run service
   run:
     enabled: true
     replicas: 1
     image:
       repository: "quay.io/idan-chetrit/mcp-s-run"
       tag: "latest"
-      pullPolicy: "IfNotPresent"
     
     service:
-      type: ClusterIP
       port: 80
       targetPort: 3000
     
@@ -161,19 +152,17 @@ deployments:
       className: "nginx"
       annotations:
         nginx.ingress.kubernetes.io/rewrite-target: /
-      subdomain: "run"
+      subdomain: "webrix-run"
       path: "/"
       pathType: "Prefix"
       tls: []
 
-  # MCP-S DB Service
   dbService:
     enabled: true
     replicas: 1
     image:
       repository: "quay.io/idan-chetrit/mcp-s-db-service"
       tag: "latest"
-      pullPolicy: "IfNotPresent"
     
     # Database configuration for dbService
     db:
@@ -183,7 +172,6 @@ deployments:
       name: "postgres"
     
     service:
-      type: ClusterIP
       port: 80
       targetPort: 3000
     
@@ -224,7 +212,7 @@ deployments:
       className: "nginx"
       annotations:
         nginx.ingress.kubernetes.io/rewrite-target: /
-      subdomain: "dbservice"
+      subdomain: "webrix-dbservice"
       path: "/"
       pathType: "Prefix"
       tls: []
@@ -262,7 +250,6 @@ postgresql:
     replicaCount: 0
   
   service:
-    type: ClusterIP
     ports:
       postgresql: 5432
   

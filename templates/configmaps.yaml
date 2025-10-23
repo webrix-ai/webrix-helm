@@ -23,12 +23,12 @@ data:
   {{ $key }}: {{ $value | quote }}
   {{- end }}
   {{- end }}
-  CONNECT_URL: "https://connect.{{ $.Values.global.domain.host }}"
-  RUN_URL: "https://run.{{ $.Values.global.domain.host }}"
-  DB_SERVICE_URL: "https://dbservice.{{ $.Values.global.domain.host }}"
-  BASE_URL: "https://{{ $serviceName | lower }}.{{ $.Values.global.domain.host }}"
-  NEXTAUTH_URL: "https://{{ $serviceName | lower }}.{{ $.Values.global.domain.host }}"
-  DB_BASE_URL: "https://dbservice.{{ $.Values.global.domain.host }}"
-  NEXT_PUBLIC_CONNECT_URL: "https://connect.{{ $.Values.global.domain.host }}"
+  CONNECT_URL: "https://{{ $.Values.deployments.connect.ingress.subdomain }}.{{ $.Values.global.domain.host }}"
+  RUN_URL: "https://{{ $.Values.deployments.run.ingress.subdomain }}.{{ $.Values.global.domain.host }}"
+  DB_SERVICE_URL: "https://{{ $.Values.deployments.dbService.ingress.subdomain }}.{{ $.Values.global.domain.host }}"
+  BASE_URL: "https://{{ $serviceConfig.ingress.subdomain }}.{{ $.Values.global.domain.host }}"
+  NEXTAUTH_URL: "https://{{ $serviceConfig.ingress.subdomain }}.{{ $.Values.global.domain.host }}"
+  DB_BASE_URL: "https://{{ $.Values.deployments.dbService.ingress.subdomain }}.{{ $.Values.global.domain.host }}"
+  NEXT_PUBLIC_CONNECT_URL: "https://{{ $.Values.deployments.connect.ingress.subdomain }}.{{ $.Values.global.domain.host }}"
 {{- end }}
 {{- end }}

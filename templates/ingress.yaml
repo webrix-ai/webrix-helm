@@ -27,7 +27,7 @@ spec:
     {{- end }}
   {{- end }}
   rules:
-    - host: {{ printf "%s.%s" $serviceConfig.ingress.subdomain $.Values.global.domain.host }}
+    - host: "{{ $serviceConfig.ingress.subdomain }}.{{ $.Values.global.domain.host }}"
       http:
         paths:
         - path: {{ $serviceConfig.ingress.path }}

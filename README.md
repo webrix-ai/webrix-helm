@@ -5,7 +5,7 @@ This is a unified Helm chart that combines all Webrix services (app, connect, ru
 ## Services
 
 - **app**: Main application service
-- **connect**: Authentication/connection service
+- **connect**: Authentication/connection service  
 - **run**: Runtime execution service
 - **db-service**: Database service layer
 - **PostgreSQL**: Optional in-cluster database (via Bitnami chart)
@@ -14,20 +14,25 @@ This is a unified Helm chart that combines all Webrix services (app, connect, ru
 
 1. **Install the chart with default values:**
    ```bash
-   helm install webrix-helm ./charts/webrix-helm
+   helm install webrix-helm .
    ```
 
-2. **Install with custom values:**
+2. **Install with minimal values:**
    ```bash
-   helm install mcp-s ./charts/webrix-helm -f custom-values.yaml
+   helm install webrix-helm . --values values-minimal.yaml
    ```
 
-3. **Install with specific overrides:**
+3. **Install with custom values:**
    ```bash
-   helm install mcp-s ./charts/webrix-helm \
+   helm install webrix-helm . -f custom-values.yaml
+   ```
+
+4. **Install with specific overrides:**
+   ```bash
+   helm install webrix-helm . \
      --namespace my-namespace \
-     --set ingress.host=my-domain.com \
-     --set services.app.replicas=3
+     --set global.domain.host=my-domain.com \
+     --set deployments.app.replicas=3
    ```
 
 ## Configuration
@@ -37,22 +42,25 @@ This is a unified Helm chart that combines all Webrix services (app, connect, ru
 ```yaml
 global:
   db_provider: "postgresql"  # or "external"
+  domain:
+    host: "webrix.local"
   labels: {}
   annotations: {}
 ```
 
 ### Service Configuration
 
-Each service can be configured independently:
+Each service can be configured independently under `deployments`:
 
 ```yaml
-services:
+deployments:
   app:
     enabled: true
     replicas: 1
     image:
       repository: "quay.io/idan-chetrit/mcp-s-app"
       tag: "latest"
+      pullPolicy: "IfNotPresent"
     resources:
       requests:
         cpu: 100m
@@ -63,6 +71,10 @@ services:
     env:
       PORT: "3000"
       ORG: "on-prem-org"
+      ON_PREM: "true"
+    ingress:
+      enabled: true
+      subdomain: "webrix-app"
 ```
 
 ### Database Configuration
@@ -100,27 +112,31 @@ externalDatabase:
 
 ### Ingress Configuration
 
-```yaml
-ingress:
-  enabled: true
-  className: "nginx"
-  host: "webrix.local"
-  annotations:
-    nginx.ingress.kubernetes.io/rewrite-target: /
+Each service has its own ingress configuration:
 
-services:
+```yaml
+deployments:
   app:
     ingress:
       enabled: true
-      subdomain: "app"
+      className: "nginx"
+      subdomain: "webrix-app"
+      path: "/"
+      pathType: "Prefix"
+      annotations:
+        nginx.ingress.kubernetes.io/rewrite-target: /
   connect:
     ingress:
       enabled: true
-      subdomain: "connect"
+      subdomain: "webrix-connect"
   run:
     ingress:
       enabled: true
-      subdomain: "run"
+      subdomain: "webrix-run"
+  dbService:
+    ingress:
+      enabled: true
+      subdomain: "webrix-dbservice"
 ```
 
 ## Environment Variables
@@ -135,9 +151,34 @@ sharedEnv:
 ```
 
 ### Service-specific Environment Variables
-Each service can have its own environment variables in the `services.<service>.env` section.
+Each service can have its own environment variables in the `deployments.<service>.env` section.
+
+### Dynamic URL Generation
+The chart automatically generates URLs for inter-service communication:
+- `BASE_URL`: Points to the current service's URL
+- `NEXTAUTH_URL`: Points to the current service's URL  
+- `CONNECT_URL`: Points to the connect service
+- `RUN_URL`: Points to the run service
+- `DB_SERVICE_URL`: Points to the dbService
+- `NEXT_PUBLIC_CONNECT_URL`: Points to the connect service
+
+These URLs are automatically generated based on `global.domain.host` and service ingress subdomains.
 
 ## Examples
+
+### Minimal Installation
+Use the `values-minimal.yaml` file for a quick start with minimal configuration:
+
+```bash
+helm install webrix-helm . --values values-minimal.yaml
+```
+
+### Production Installation
+For production deployments, customize the values.yaml file:
+
+```bash
+helm install webrix-helm . --values values.yaml --namespace webrix-prod
+```
 
 ## Troubleshooting
 

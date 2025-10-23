@@ -19,16 +19,18 @@ spec:
         {{- include "webrix.podLabels" (dict "serviceName" $serviceName "podLabels" $serviceConfig.podLabels "root" $) | nindent 8 }}
       annotations:
         checksum/configmap: {{ include (print $.Template.BasePath "/configmaps.yaml") $ | sha256sum }}
-        {{- include "webrix.podAnnotations" (dict "podAnnotations" $serviceConfig.podAnnotations "root" $) | nindent 8 }}
+        {{- with $serviceConfig.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
     spec:
       serviceAccountName: {{ printf "%s-sa" $serviceName | lower }}
       containers:
         - name: {{ $serviceName | lower }}
           image: "{{ $serviceConfig.image.repository }}:{{ $serviceConfig.image.tag }}"
-          imagePullPolicy: {{ $serviceConfig.image.pullPolicy | default "ifnotpresent" }}
+          imagePullPolicy: {{ $serviceConfig.image.pullPolicy | default "IfNotPresent" }}
           ports:
             - name: http
-              containerPort: {{ $serviceConfig.service.targetPort | default 3000 }}
+              containerPort: {{ $serviceConfig.service.targetPort }}
               protocol: TCP
           envFrom:
             - configMapRef:
@@ -36,7 +38,7 @@ spec:
             - secretRef:
                 name: {{ printf "%s-secret" $serviceName | lower }}
           resources:
-            {{- toYaml ($serviceConfig.resources | default (dict "requests" (dict "cpu" "100m" "memory" "200Mi") "limits" (dict "cpu" "1000m" "memory" "2048Mi"))) | nindent 12 }}
+            {{- toYaml $serviceConfig.resources | nindent 12 }}
           {{- with $serviceConfig.nodeSelector }}
           nodeSelector:
             {{- toYaml . | nindent 12 }}

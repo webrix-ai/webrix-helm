@@ -11,10 +11,10 @@ metadata:
 spec:
   type: {{ $serviceConfig.service.type | default "ClusterIP" }}
   ports:
-    - port: {{ $serviceConfig.service.port | default 80 }}
-      targetPort: {{ $serviceConfig.service.targetPort | default 3000 }}
+    - port: {{ $serviceConfig.service.port }}
+      targetPort: {{ $serviceConfig.service.targetPort }}
       protocol: TCP
   selector:
-    {{- include "webrix.serviceSelectorLabels" (dict "serviceName" $serviceName "root" $) | nindent 4 }}
+    app: {{ $serviceName }}
 {{- end }}
 {{- end }}

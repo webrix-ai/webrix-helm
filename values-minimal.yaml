@@ -14,27 +14,22 @@ global:
 deployments:
   # Webrix App service
   app:
-    enabled: true
     ingress:
-      enabled: true
+      subdomain: "webrix-app"
     env:
-      # NextAuth.js trusted hosts (not in main values.yaml)
       AUTH_TRUST_HOST: "true"
-
-  # Webrix Connect service  
+ 
   connect:
-    enabled: true
     ingress:
-      enabled: true
+      subdomain: "webrix-connect"
 
-  # Webrix Run service
   run:
-    enabled: true
     ingress:
-      enabled: true
+      subdomain: "webrix-run"
 
   dbService:
-    enabled: true
+    ingress:
+      subdomain: "webrix-dbservice"
 
 # PostgreSQL configuration (only used if db_provider is "postgresql")
 postgresql:
