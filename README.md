@@ -189,12 +189,7 @@ helm install webrix-helm . --values values.yaml --namespace webrix-prod
    - Check database credentials and connection strings
    - Ensure PostgreSQL is running if using in-cluster database
 
-2. **Service Communication Issues**
-   - Verify all services are in the same namespace
-   - Check service names and ports
-   - Ensure DNS resolution is working
-
-3. **Ingress Issues**
+2. **Ingress Issues**
    - Verify ingress controller is installed
    - Check ingress class and annotations
    - Ensure DNS is pointing to your cluster
@@ -202,4 +197,80 @@ helm install webrix-helm . --values values.yaml --namespace webrix-prod
 
 ## Values Reference
 
-See the `values.yaml` file for a complete list of configurable values with their descriptions and default values.
+### Global Configuration
+
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `global.db_provider` | `"postgresql"` | Database provider: "postgresql" for in-cluster or "external" for external |
+| `global.domain.host` | `"blahblah.com"` | Global domain for all services |
+| `global.labels` | `{}` | Common labels applied to all resources |
+| `global.annotations` | `{}` | Common annotations applied to all resources |
+
+### Service Configuration
+
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `deployments.<service>.enabled` | `true` | Enable/disable the service |
+| `deployments.<service>.replicas` | `1` | Number of replicas |
+| `deployments.<service>.image.repository` | Service-specific | Container image repository |
+| `deployments.<service>.image.tag` | `"latest"` | Container image tag |
+| `deployments.<service>.image.pullPolicy` | `"IfNotPresent"` | Image pull policy |
+| `deployments.<service>.service.type` | `"ClusterIP"` | Kubernetes service type |
+| `deployments.<service>.service.port` | `80` | Service port |
+| `deployments.<service>.service.targetPort` | `3000` | Container port |
+| `deployments.<service>.resources.requests.cpu` | `"100m"` | CPU request |
+| `deployments.<service>.resources.requests.memory` | `"200Mi"` | Memory request |
+| `deployments.<service>.resources.limits.cpu` | `"1000m"` | CPU limit |
+| `deployments.<service>.resources.limits.memory` | `"2048Mi"` | Memory limit |
+
+### Ingress Configuration
+
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `deployments.<service>.ingress.enabled` | `true` | Enable ingress for the service |
+| `deployments.<service>.ingress.className` | `"nginx"` | Ingress class name |
+| `deployments.<service>.ingress.subdomain` | Service-specific | Subdomain for the service |
+| `deployments.<service>.ingress.path` | `"/"` | Ingress path |
+| `deployments.<service>.ingress.pathType` | `"Prefix"` | Path type |
+| `deployments.<service>.ingress.annotations` | `{}` | Ingress annotations |
+
+### Environment Variables
+
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `deployments.<service>.env` | Service-specific | Service environment variables |
+| `deployments.<service>.extraEnv` | Service-specific | Additional environment variables |
+| `sharedEnv` | See values.yaml | Shared environment variables for all services |
+
+### Database Configuration
+
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `postgresql.enabled` | `true` | Enable in-cluster PostgreSQL |
+| `postgresql.auth.postgresPassword` | `"postgres"` | PostgreSQL password |
+| `postgresql.auth.database` | `"postgres"` | Database name |
+| `postgresql.primary.persistence.enabled` | `true` | Enable persistent storage |
+| `postgresql.primary.persistence.size` | `"8Gi"` | Storage size |
+| `externalDatabase.host` | `""` | External database host |
+| `externalDatabase.port` | `5432` | External database port |
+| `externalDatabase.database` | `"postgres"` | External database name |
+| `externalDatabase.username` | `"postgres"` | External database username |
+| `externalDatabase.password` | `""` | External database password |
+
+### Service-Specific Defaults
+
+#### App Service
+- **Subdomain**: `webrix-app`
+- **Environment**: `PORT`, `ORG`, `ON_PREM`, `NEXTAUTH_URL`, `NEXT_PUBLIC_CONNECT_URL`
+
+#### Connect Service  
+- **Subdomain**: `webrix-connect`
+- **Environment**: `PORT`, `ORG`, `ON_PREM`, `DEBUG`, `NEXTAUTH_URL`
+
+#### Run Service
+- **Subdomain**: `webrix-run`
+- **Environment**: `PORT`, `ORG`, `LOG_LEVEL`
+
+#### DB Service
+- **Subdomain**: `webrix-dbservice`
+- **Environment**: `PORT`, `ORG`, `ON_PREM`, `DEBUG_QUERIES`, `POSTGRES_HOST_AUTH_METHOD`, `RATE_LIMIT_MAX`, `RATE_LIMIT_WINDOW`
