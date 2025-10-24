@@ -1,0 +1,158 @@
+name: Release Helm Chart
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'Chart.yaml'
+      - 'values.yaml'
+      - 'templates/**'
+  workflow_dispatch:
+    inputs:
+      auto_bump:
+        description: 'Auto-bump patch version if exists'
+        required: false
+        type: boolean
+        default: true
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure Git
+        run: |
+          git config user.name "$GITHUB_ACTOR"
+          git config user.email "$GITHUB_ACTOR@users.noreply.github.com"
+
+      - name: Install Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: v3.12.0
+
+      - name: Check and bump chart version
+        id: version_check
+        run: |
+          chart_name=$(grep '^name:' Chart.yaml | awk '{print $2}')
+          current_version=$(grep '^version:' Chart.yaml | awk '{print $2}')
+          
+          echo "Checking $chart_name version $current_version"
+          
+          # Check if this version already exists as a release
+          if gh release view "v$current_version" &>/dev/null; then
+            echo "⚠️  Version $current_version of $chart_name already exists"
+            
+            if [ "${{ github.event.inputs.auto_bump }}" == "true" ] || [ "${{ github.event_name }}" == "push" ]; then
+              # Auto-bump patch version
+              IFS='.' read -r major minor patch <<< "$current_version"
+              new_version="$major.$minor.$((patch + 1))"
+              
+              echo "🔄 Auto-bumping to $new_version"
+              sed -i "s/^version: .*/version: $new_version/" Chart.yaml
+              
+              git add Chart.yaml
+              git commit -m "chore: bump $chart_name to $new_version [skip ci]"
+              git push
+              
+              # Re-read the updated version
+              current_version=$(grep '^version:' Chart.yaml | awk '{print $2}')
+              echo "Updated to version: $current_version"
+            else
+              echo "❌ Please bump the version in Chart.yaml"
+              exit 1
+            fi
+          else
+            echo "✅ Version $current_version is new, proceeding with release"
+          fi
+          
+          # Export for later steps
+          echo "chart_name=$chart_name" >> $GITHUB_OUTPUT
+          echo "version=$current_version" >> $GITHUB_OUTPUT
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Package Helm chart
+        run: |
+          helm package .
+          
+      - name: Create GitHub release
+        run: |
+          chart_name="${{ steps.version_check.outputs.chart_name }}"
+          version="${{ steps.version_check.outputs.version }}"
+          
+          # Create release and upload chart package
+          gh release create "v$version" \
+            "$chart_name-$version.tgz" \
+            --title "$chart_name $version" \
+            --notes "Release of $chart_name version $version"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Update Helm repo index
+        run: |
+          # Clone the repo to a temp directory for gh-pages work
+          temp_dir=$(mktemp -d)
+          git clone --single-branch --branch gh-pages "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" "$temp_dir" 2>/dev/null || {
+            # Branch doesn't exist, create it
+            git clone "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" "$temp_dir"
+            cd "$temp_dir"
+            git checkout --orphan gh-pages
+            git rm -rf . 2>/dev/null || true
+            cd -
+          }
+          
+          cd "$temp_dir"
+          
+          # Download all chart releases
+          mkdir -p charts
+          gh release list --limit 100 | while read -r line; do
+            tag=$(echo "$line" | awk '{print $1}')
+            if [[ "$tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+              echo "Downloading release: $tag"
+              gh release download "$tag" -D charts/ 2>/dev/null || echo "Failed to download $tag, skipping..."
+            fi
+          done
+          
+          # Generate index.yaml
+          helm repo index charts --url "https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}"
+          
+          # Move index to root and keep charts directory
+          cp charts/index.yaml .
+          
+          # Commit and push
+          git add index.yaml charts/
+          git commit -m "Update Helm repository index for v${{ steps.version_check.outputs.version }}" || echo "No changes to commit"
+          git push origin gh-pages
+          
+          # Copy index.yaml back to main workspace for Pages deployment
+          cp index.yaml "$GITHUB_WORKSPACE/"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+
+      - name: Prepare Pages artifact
+        run: |
+          mkdir -p _site
+          cp index.yaml _site/
+          
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
