@@ -18,6 +18,7 @@ deployments:
       subdomain: "webrix-app"
     env:
       AUTH_TRUST_HOST: "true"
+      TEST_ENV: "test"
  
   connect:
     ingress:
@@ -42,7 +43,6 @@ postgresql:
       enabled: true
       size: 2Gi
 
-# Ingress configuration
 ingress:
   enabled: true
   className: "nginx"
