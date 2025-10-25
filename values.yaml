@@ -22,7 +22,7 @@ deployments:
     enabled: true
     replicas: 1
     image:
-      repository: "quay.io/idan-chetrit/mcp-s-app"
+      repository: "quay.io/webrix/mcp-s-app"
       tag: "latest"
     
     service:
@@ -68,7 +68,7 @@ deployments:
     enabled: true
     replicas: 1
     image:
-      repository: "quay.io/idan-chetrit/mcp-s-connect"
+      repository: "quay.io/webrix/mcp-s-connect"
       tag: "latest"
     
     service:
@@ -115,7 +115,7 @@ deployments:
     enabled: true
     replicas: 1
     image:
-      repository: "quay.io/idan-chetrit/mcp-s-run"
+      repository: "quay.io/webrix/mcp-s-run"
       tag: "latest"
     
     service:
@@ -161,7 +161,7 @@ deployments:
     enabled: true
     replicas: 1
     image:
-      repository: "quay.io/idan-chetrit/mcp-s-db-service"
+      repository: "quay.io/webrix/mcp-s-db-service"
       tag: "latest"
     
     # Database configuration for dbService
