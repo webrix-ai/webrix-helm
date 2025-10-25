@@ -1,13 +1,6 @@
 name: Release Helm Chart
 
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - 'Chart.yaml'
-      - 'values.yaml'
-      - 'templates/**'
   workflow_dispatch:
     inputs:
       auto_bump:
@@ -15,6 +8,21 @@ on:
         required: false
         type: boolean
         default: true
+  # push:
+  #   branches:
+  #     - main
+  #     - first-branch-refactoring
+  #   paths:
+  #     - 'Chart.yaml'
+  #     - 'values.yaml'
+  #     - 'templates/**'
+  # workflow_dispatch:
+  #   inputs:
+  #     auto_bump:
+  #       description: 'Auto-bump patch version if exists'
+  #       required: false
+  #       type: boolean
+  #       default: true
 
 permissions:
   contents: write
