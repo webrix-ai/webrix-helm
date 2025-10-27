@@ -153,6 +153,35 @@ sharedEnv:
 ### Service-specific Environment Variables
 Each service can have its own environment variables in the `deployments.<service>.env` section.
 
+### Sealed Secrets Support
+The chart supports SealedSecret resources alongside regular secrets for sensitive data. Use `envsubst` to substitute environment variables before installation:
+
+```yaml
+deployments:
+  app:
+    sealedSecrets:
+      API_KEY: ${{ secrets.API_KEY }}
+      DATABASE_PASSWORD: ${{ secrets.DB_PASSWORD }}
+      JWT_SECRET: ${{ secrets.JWT_SECRET }}
+```
+
+**Prerequisites:**
+- Sealed Secrets operator must be installed in your cluster
+- Public key must be available for encryption
+
+**Usage:**
+1. Set environment variables: `export API_KEY="your-secret-key"`
+2. Process values file: `envsubst < values.yaml > values-processed.yaml`
+3. Install chart: `helm install webrix . -f values-processed.yaml`
+
+**How it works:**
+- Chart creates **SealedSecret** resources (named `{service}-sealed-secret`)
+- Sealed Secrets operator **automatically decrypts** them
+- Creates regular **Kubernetes secrets** (named `{service}-secret`)
+- Pods mount secrets as **environment variables**
+
+**Note:** Both regular secrets and SealedSecrets can be used simultaneously. Regular secrets are always created, SealedSecrets are only created when `sealedSecrets` is defined.
+
 ### Dynamic URL Generation
 The chart automatically generates URLs for inter-service communication:
 - `BASE_URL`: Points to the current service's URL
@@ -240,6 +269,7 @@ helm install webrix-helm . --values values.yaml --namespace webrix-prod
 |-----------|---------|-------------|
 | `deployments.<service>.env` | Service-specific | Service environment variables |
 | `deployments.<service>.extraEnv` | Service-specific | Additional environment variables |
+| `deployments.<service>.sealedSecrets` | `{}` | Sealed secrets (use envsubst for substitution) |
 | `sharedEnv` | See values.yaml | Shared environment variables for all services |
 
 ### Database Configuration

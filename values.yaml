@@ -55,6 +55,8 @@ deployments:
       ON_PREM: "true"
       AUTH_SECRET: "aUi2V5iCVqUrbrdjKty1zH4HCqszXArV9BLVU2giqhY="
 
+    secrets: {}
+
     ingress:
       enabled: true
       className: "nginx"
@@ -95,7 +97,7 @@ deployments:
       create: true
       annotations: {}
       name: ""
-    
+
     env:
       PORT: "3000"
       ORG: "on-prem-org"
@@ -143,7 +145,7 @@ deployments:
       create: true
       annotations: {}
       name: ""
-    
+
     env:
       PORT: "3000"
       ORG: "on-prem-org"
@@ -196,7 +198,7 @@ deployments:
       create: true
       annotations: {}
       name: ""
-    
+
     env:
       PORT: "3000"
       ORG: "on-prem-org"

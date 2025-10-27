@@ -19,6 +19,8 @@ deployments:
     env:
       AUTH_TRUST_HOST: "true"
       TEST_ENV: "test"
+    secrets:
+      MY_SEALED_SECRET: "blahblah"
  
   connect:
     ingress:
