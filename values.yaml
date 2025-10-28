@@ -55,15 +55,12 @@ deployments:
       ON_PREM: "true"
       AUTH_SECRET: "aUi2V5iCVqUrbrdjKty1zH4HCqszXArV9BLVU2giqhY="
 
-<<<<<<< Updated upstream
-=======
     # Health check probes
     readinessProbe: {}
     livenessProbe: {}
 
     secrets: {}
 
->>>>>>> Stashed changes
     ingress:
       enabled: true
       className: "nginx"

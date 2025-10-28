@@ -37,12 +37,12 @@ jobs:
           git config user.name "$GITHUB_ACTOR"
           git config user.email "$GITHUB_ACTOR@users.noreply.github.com"
 
-      - name: Install GitHub CLI
-        run: |
-          curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg
-          echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null
-          sudo apt update
-          sudo apt install gh -y
+      # - name: Install GitHub CLI
+      #   run: |
+      #     curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg
+      #     echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null
+      #     sudo apt update
+      #     sudo apt install gh -y
 
       - name: Auth GH CLI
         run: gh auth setup-git
@@ -149,16 +149,14 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Commit updated image tags
+      - name: Show updated image tags
         run: |
           if git diff --quiet values.yaml; then
-            echo "ℹ️  No changes to commit in values.yaml"
+            echo "ℹ️  No changes to values.yaml"
           else
-            echo "📝 Committing updated image tags..."
-            git add values.yaml
-            git commit -m "chore: update image tags from latest releases [skip ci]"
-            git push
-            echo "✅ Image tags updated and committed"
+            echo "📝 Updated image tags (not committed):"
+            git diff values.yaml
+            echo "✅ Image tags updated for packaging (changes not committed)"
           fi
 
       - name: Build chart dependencies
@@ -184,41 +182,51 @@ jobs:
       
       - name: Update Helm repo index
         run: |
-          # Clone the repo to a temp directory for gh-pages work
+          # Setup Git identity for this step
+          git config --global user.email "github-actions@github.com"
+          git config --global user.name "github-actions"
+
           temp_dir=$(mktemp -d)
-          git clone --single-branch --branch gh-pages "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" "$temp_dir" 2>/dev/null || {
-            # Branch doesn't exist, create it
-            git clone "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" "$temp_dir"
+          repo_url="https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git"
+
+          echo "📦 Cloning gh-pages branch..."
+          if git clone --single-branch --branch gh-pages "$repo_url" "$temp_dir" 2>/dev/null; then
+            echo "✅ gh-pages branch found"
+          else
+            echo "⚙️  Creating gh-pages branch from scratch"
+            git clone "$repo_url" "$temp_dir"
             cd "$temp_dir"
             git checkout --orphan gh-pages
-            git rm -rf . 2>/dev/null || true
+            rm -rf ./*
+            echo "# Helm repo" > README.md
+            git add README.md
+            git commit -m "Initialize gh-pages branch"
+            git push origin gh-pages
             cd -
-          }
-          
+          fi
+
           cd "$temp_dir"
-          
-          # Download all chart releases
+
           mkdir -p charts
+          echo "📥 Downloading chart releases..."
           gh release list --limit 100 | while read -r line; do
             tag=$(echo "$line" | awk '{print $1}')
             if [[ "$tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-              echo "Downloading release: $tag"
-              gh release download "$tag" -D charts/ 2>/dev/null || echo "Failed to download $tag, skipping..."
+              echo "Downloading $tag..."
+              gh release download "$tag" -D charts/ 2>/dev/null || echo "⚠️ Failed to download $tag"
             fi
           done
-          
-          # Generate index.yaml
+
+          echo "🧭 Generating index.yaml..."
           helm repo index charts --url "https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}"
-          
-          # Move index to root and keep charts directory
+
           cp charts/index.yaml .
-          
-          # Commit and push
+
+          echo "📤 Committing and pushing index.yaml..."
           git add index.yaml charts/
-          git commit -m "Update Helm repository index for v${{ steps.version_check.outputs.version }}" || echo "No changes to commit"
+          git commit -m "Update Helm repo index for v${{ steps.version_check.outputs.version }}" || echo "No changes to commit"
           git push origin gh-pages
           
-          # Copy index.yaml back to main workspace for Pages deployment
           cp index.yaml "$GITHUB_WORKSPACE/"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
