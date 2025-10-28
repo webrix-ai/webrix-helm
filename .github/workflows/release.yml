@@ -83,6 +83,78 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+<<<<<<< Updated upstream
+=======
+      - name: Update image tags from latest releases
+        run: |
+          echo "🔄 Updating image tags from latest GitHub releases..."
+          
+          # Function to get latest release tag
+          get_latest_tag() {
+            local repo=$1
+            gh api "repos/$repo/releases/latest" --jq '.tag_name' 2>/dev/null || echo "latest"
+          }
+          
+          # Repository mappings
+          declare -A repo_mapping=(
+            ["app"]="webrix-ai/mcp-s-app"
+            ["run"]="webrix-ai/mcp-s-run"
+            ["connect"]="webrix-ai/mcp-s-connect"
+            ["dbService"]="webrix-ai/mcp-s-db-service"
+          )
+          
+          # Update image tags for each service
+          for service in "${!repo_mapping[@]}"; do
+            repo="${repo_mapping[$service]}"
+            echo "📦 Checking latest release for $service (repo: $repo)..."
+            
+            latest_tag=$(get_latest_tag "$repo")
+            echo "🏷️  Latest tag for $service: $latest_tag"
+            
+            if [ "$latest_tag" != "latest" ]; then
+              # Remove 'v' prefix if present
+              clean_tag=$(echo "$latest_tag" | sed 's/^v//')
+              
+              # Update the image tag in values.yaml for the specific service
+              # Use awk to update only the tag within the specific service section
+              awk -v service="$service" -v new_tag="$clean_tag" '
+                BEGIN { in_service = 0 }
+                /^deployments:/ { in_deployments = 1; next }
+                in_deployments && /^  [a-zA-Z]/ && !/^  '$service':/ { in_service = 0 }
+                in_deployments && /^  '$service':/ { in_service = 1; print; next }
+                in_service && /^    tag:/ { print "    tag: \"" new_tag "\""; next }
+                { print }
+              ' values.yaml > values.yaml.tmp && mv values.yaml.tmp values.yaml
+              
+              echo "✅ Updated $service image tag to: $clean_tag"
+            else
+              echo "⚠️  Could not fetch latest tag for $service, keeping current tag"
+            fi
+          done
+          
+          # Show the changes
+          echo "📋 Updated image tags:"
+          grep -A 1 "repository: quay.io/webrix/mcp-s-" values.yaml || echo "No image repositories found"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Commit updated image tags
+        run: |
+          if git diff --quiet values.yaml; then
+            echo "ℹ️  No changes to commit in values.yaml"
+          else
+            echo "📝 Committing updated image tags..."
+            git add values.yaml
+            git commit -m "chore: update image tags from latest releases [skip ci]"
+            git push
+            echo "✅ Image tags updated and committed"
+          fi
+
+      - name: Build chart dependencies
+        run: |
+          helm dependency build
+
+>>>>>>> Stashed changes
       - name: Package Helm chart
         run: |
           helm package .
