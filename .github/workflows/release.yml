@@ -37,6 +37,18 @@ jobs:
           git config user.name "$GITHUB_ACTOR"
           git config user.email "$GITHUB_ACTOR@users.noreply.github.com"
 
+      - name: Install GitHub CLI
+        run: |
+          curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg
+          echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null
+          sudo apt update
+          sudo apt install gh -y
+
+      - name: Auth GH CLI
+        run: gh auth setup-git
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Install Helm
         uses: azure/setup-helm@v4
         with:
@@ -83,8 +95,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-<<<<<<< Updated upstream
-=======
+
       - name: Update image tags from latest releases
         run: |
           echo "🔄 Updating image tags from latest GitHub releases..."
@@ -154,7 +165,6 @@ jobs:
         run: |
           helm dependency build
 
->>>>>>> Stashed changes
       - name: Package Helm chart
         run: |
           helm package .
