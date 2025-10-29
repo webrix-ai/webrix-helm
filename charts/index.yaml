@@ -2,7 +2,22 @@ apiVersion: v1
 entries:
   webrix-helm:
   - apiVersion: v2
-    created: "2025-10-29T22:30:15.859415198Z"
+    created: "2025-10-29T22:31:35.974460491Z"
+    dependencies:
+    - condition: postgresql.enabled
+      name: postgresql
+      repository: oci://registry-1.docker.io/bitnamicharts
+      version: 16.7.12
+    description: A unified Helm chart for deploying all Webrix services (app, connect,
+      run, db-service)
+    digest: 352c3e9579ca15bffcf6dc38533de4273371d00253d48deeeb4603f9b88917c6
+    name: webrix-helm
+    type: application
+    urls:
+    - https://github.com/webrix-ai/webrix-helm/gh-pages/charts/webrix-helm-0.1.9.tgz
+    version: 0.1.9
+  - apiVersion: v2
+    created: "2025-10-29T22:31:35.962944874Z"
     dependencies:
     - condition: postgresql.enabled
       name: postgresql
@@ -14,10 +29,10 @@ entries:
     name: webrix-helm
     type: application
     urls:
-    - https://github.com/webrix-ai/webrix-ai/webrix-helm/gh-pages/charts/webrix-helm-0.1.8.tgz
+    - https://github.com/webrix-ai/webrix-helm/gh-pages/charts/webrix-helm-0.1.8.tgz
     version: 0.1.8
   - apiVersion: v2
-    created: "2025-10-29T22:30:15.849555857Z"
+    created: "2025-10-29T22:31:35.951276688Z"
     dependencies:
     - condition: postgresql.enabled
       name: postgresql
@@ -29,10 +44,10 @@ entries:
     name: webrix-helm
     type: application
     urls:
-    - https://github.com/webrix-ai/webrix-ai/webrix-helm/gh-pages/charts/webrix-helm-0.1.7.tgz
+    - https://github.com/webrix-ai/webrix-helm/gh-pages/charts/webrix-helm-0.1.7.tgz
     version: 0.1.7
   - apiVersion: v2
-    created: "2025-10-29T22:30:15.83968442Z"
+    created: "2025-10-29T22:31:35.943317111Z"
     dependencies:
     - condition: postgresql.enabled
       name: postgresql
@@ -44,10 +59,10 @@ entries:
     name: webrix-helm
     type: application
     urls:
-    - https://github.com/webrix-ai/webrix-ai/webrix-helm/gh-pages/charts/webrix-helm-0.1.6.tgz
+    - https://github.com/webrix-ai/webrix-helm/gh-pages/charts/webrix-helm-0.1.6.tgz
     version: 0.1.6
   - apiVersion: v2
-    created: "2025-10-29T22:30:15.8310234Z"
+    created: "2025-10-29T22:31:35.934924004Z"
     dependencies:
     - condition: postgresql.enabled
       name: postgresql
@@ -59,6 +74,6 @@ entries:
     name: webrix-helm
     type: application
     urls:
-    - https://github.com/webrix-ai/webrix-ai/webrix-helm/gh-pages/charts/webrix-helm-0.1.5.tgz
+    - https://github.com/webrix-ai/webrix-helm/gh-pages/charts/webrix-helm-0.1.5.tgz
     version: 0.1.5
-generated: "2025-10-29T22:30:15.822663503Z"
+generated: "2025-10-29T22:31:35.926676929Z"
