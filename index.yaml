@@ -2,7 +2,22 @@ apiVersion: v1
 entries:
   webrix-helm:
   - apiVersion: v2
-    created: "2025-10-29T22:00:59.458241323Z"
+    created: "2025-10-29T22:05:29.817646994Z"
+    dependencies:
+    - condition: postgresql.enabled
+      name: postgresql
+      repository: oci://registry-1.docker.io/bitnamicharts
+      version: 16.7.12
+    description: A unified Helm chart for deploying all Webrix services (app, connect,
+      run, db-service)
+    digest: f648a321c78b0f69217b4b5e44d06acfe1eacf2e0b76488f95b1a64c7e0483d9
+    name: webrix-helm
+    type: application
+    urls:
+    - https://raw.githubusercontent.com/webrix-ai/webrix-helm/gh-pages/charts/webrix-helm-0.1.6.tgz
+    version: 0.1.6
+  - apiVersion: v2
+    created: "2025-10-29T22:05:29.808916124Z"
     dependencies:
     - condition: postgresql.enabled
       name: postgresql
@@ -16,4 +31,4 @@ entries:
     urls:
     - https://raw.githubusercontent.com/webrix-ai/webrix-helm/gh-pages/charts/webrix-helm-0.1.5.tgz
     version: 0.1.5
-generated: "2025-10-29T22:00:59.449072796Z"
+generated: "2025-10-29T22:05:29.800956932Z"
