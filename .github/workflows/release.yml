@@ -96,14 +96,15 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
 
-      - name: Update image tags from latest releases
+      - name: Update image tags from latest tags
         run: |
-          echo "🔄 Updating image tags from latest GitHub releases..."
+          echo "🔄 Updating image tags from latest GitHub tags..."
           
-          # Function to get latest release tag
+          # Function to get latest tag
           get_latest_tag() {
             local repo=$1
-            gh api "repos/$repo/releases/latest" --jq '.tag_name' 2>/dev/null || echo "latest"
+            # Get tags sorted by creation time (most recent first), take the first one
+            gh api "repos/$repo/tags?per_page=1" --jq '.[0].name' 2>/dev/null || echo "latest"
           }
           
           # Repository mappings
@@ -117,7 +118,7 @@ jobs:
           # Update image tags for each service
           for service in "${!repo_mapping[@]}"; do
             repo="${repo_mapping[$service]}"
-            echo "📦 Checking latest release for $service (repo: $repo)..."
+            echo "📦 Checking latest tag for $service (repo: $repo)..."
             
             latest_tag=$(get_latest_tag "$repo")
             echo "🏷️  Latest tag for $service: $latest_tag"
