@@ -149,14 +149,16 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Show updated image tags
+      - name: Commit updated image tags
         run: |
           if git diff --quiet values.yaml; then
-            echo "ℹ️  No changes to values.yaml"
+            echo "ℹ️  No changes to commit in values.yaml"
           else
-            echo "📝 Updated image tags (not committed):"
-            git diff values.yaml
-            echo "✅ Image tags updated for packaging (changes not committed)"
+            echo "📝 Committing updated image tags..."
+            git add values.yaml
+            git commit -m "chore: update image tags from latest releases [skip ci]"
+            git push
+            echo "✅ Image tags updated and committed"
           fi
 
       - name: Build chart dependencies
