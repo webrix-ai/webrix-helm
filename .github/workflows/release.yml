@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - first-branch-refactoring
     paths:
       - 'Chart.yaml'
       - 'values.yaml'
@@ -36,11 +37,6 @@ jobs:
           git config user.name "$GITHUB_ACTOR"
           git config user.email "$GITHUB_ACTOR@users.noreply.github.com"
 
-      - name: Auth GH CLI
-        run: gh auth setup-git
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
       - name: Install Helm
         uses: azure/setup-helm@v4
         with:
@@ -50,127 +46,46 @@ jobs:
         id: version_check
         run: |
           chart_name=$(grep '^name:' Chart.yaml | awk '{print $2}')
-          chart_version=$(grep '^version:' Chart.yaml | awk '{print $2}')
+          current_version=$(grep '^version:' Chart.yaml | awk '{print $2}')
           
-          echo "📋 Chart: $chart_name, Current Chart.yaml version: $chart_version"
+          echo "Checking $chart_name version $current_version"
           
-          # Get the latest release tag from the repository
-          latest_release_tag=$(gh release list --limit 1 --json tagName --jq '.[0].tagName' 2>/dev/null || echo "")
-          
-          if [ -z "$latest_release_tag" ]; then
-            echo "ℹ️  No existing releases found, using Chart.yaml version: $chart_version"
-            new_version="$chart_version"
-          else
-            # Remove 'v' prefix if present
-            latest_version=$(echo "$latest_release_tag" | sed 's/^v//')
-            echo "📦 Latest release found: $latest_release_tag (version: $latest_version)"
+          # Check if this version already exists as a release
+          if gh release view "v$current_version" &>/dev/null; then
+            echo "⚠️  Version $current_version of $chart_name already exists"
             
-            # Bump patch version
-            IFS='.' read -r major minor patch <<< "$latest_version"
-            new_version="$major.$minor.$((patch + 1))"
-            echo "🔄 Bumping to new version: $new_version"
-          fi
-          
-          # Update Chart.yaml with the new version
-          if [ "$new_version" != "$chart_version" ]; then
-            echo "📝 Updating Chart.yaml from $chart_version to $new_version"
-            sed -i "s/^version: .*/version: $new_version/" Chart.yaml
-            
-            git add Chart.yaml
-            git commit -m "chore: bump $chart_name to $new_version [skip ci]"
-            git push
-            echo "✅ Chart.yaml updated and committed"
+            if [ "${{ github.event.inputs.auto_bump }}" == "true" ] || [ "${{ github.event_name }}" == "push" ]; then
+              # Auto-bump patch version
+              IFS='.' read -r major minor patch <<< "$current_version"
+              new_version="$major.$minor.$((patch + 1))"
+              
+              echo "🔄 Auto-bumping to $new_version"
+              sed -i "s/^version: .*/version: $new_version/" Chart.yaml
+              
+              git add Chart.yaml
+              git commit -m "chore: bump $chart_name to $new_version [skip ci]"
+              git push
+              
+              # Re-read the updated version
+              current_version=$(grep '^version:' Chart.yaml | awk '{print $2}')
+              echo "Updated to version: $current_version"
+            else
+              echo "❌ Please bump the version in Chart.yaml"
+              exit 1
+            fi
           else
-            echo "ℹ️  Chart.yaml version is already up to date"
+            echo "✅ Version $current_version is new, proceeding with release"
           fi
           
           # Export for later steps
           echo "chart_name=$chart_name" >> $GITHUB_OUTPUT
-          echo "version=$new_version" >> $GITHUB_OUTPUT
+          echo "version=$current_version" >> $GITHUB_OUTPUT
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-
-      - name: Update image tags from latest tags
-        run: |
-          echo "🔄 Updating image tags from latest GitHub tags..."
-          
-          # Function to get latest tag
-          get_latest_tag() {
-            local repo=$1
-            # Get tags sorted by creation time (most recent first), take the first one
-            gh api "repos/$repo/tags?per_page=1" --jq '.[0].name' 2>/dev/null || echo "latest"
-          }
-          
-          # Repository mappings
-          declare -A repo_mapping=(
-            ["app"]="webrix-ai/mcp-s-app"
-            ["run"]="webrix-ai/mcp-s-run"
-            ["connect"]="webrix-ai/mcp-s-connect"
-            ["dbService"]="webrix-ai/mcp-s-db-service"
-          )
-          
-          # Update image tags for each service
-          for service in "${!repo_mapping[@]}"; do
-            repo="${repo_mapping[$service]}"
-            echo "📦 Checking latest tag for $service (repo: $repo)..."
-            
-            latest_tag=$(get_latest_tag "$repo")
-            echo "🏷️  Latest tag for $service: $latest_tag"
-            
-            if [ "$latest_tag" != "latest" ]; then
-              # Remove 'v' prefix if present
-              clean_tag=$(echo "$latest_tag" | sed 's/^v//')
-              
-              # Update the image tag in values.yaml for the specific service
-              # Use awk to update only the tag within the specific service section
-              awk -v service="$service" -v new_tag="$clean_tag" '
-                BEGIN { in_service = 0 }
-                /^deployments:/ { in_deployments = 1; next }
-                in_deployments && /^  [a-zA-Z]/ && !/^  '$service':/ { in_service = 0 }
-                in_deployments && /^  '$service':/ { in_service = 1; print; next }
-                in_service && /^    tag:/ { print "    tag: \"" new_tag "\""; next }
-                { print }
-              ' values.yaml > values.yaml.tmp && mv values.yaml.tmp values.yaml
-              
-              echo "✅ Updated $service image tag to: $clean_tag"
-            else
-              echo "⚠️  Could not fetch latest tag for $service, keeping current tag"
-            fi
-          done
-          
-          # Show the changes
-          echo "📋 Updated image tags:"
-          grep -A 1 "repository: quay.io/webrix/mcp-s-" values.yaml || echo "No image repositories found"
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Commit updated image tags
-        run: |
-          if git diff --quiet values.yaml; then
-            echo "ℹ️  No changes to commit in values.yaml"
-          else
-            echo "📝 Committing updated image tags..."
-            git add values.yaml
-            git commit -m "chore: update image tags from latest releases [skip ci]"
-            git push
-            echo "✅ Image tags updated and committed"
-          fi
-
-      - name: Build chart dependencies
-        run: |
-          helm dependency build
 
       - name: Package Helm chart
         run: |
           helm package .
-
-      - name: Copy packaged chart for indexing
-        run: |
-          chart_name="${{ steps.version_check.outputs.chart_name }}"
-          version="${{ steps.version_check.outputs.version }}"
-          mkdir -p /tmp/charts
-          cp "$chart_name-$version.tgz" /tmp/charts/
           
       - name: Create GitHub release
         run: |
@@ -189,18 +104,11 @@ jobs:
         run: |
           git config --global user.email "github-actions@github.com"
           git config --global user.name "github-actions"
-<<<<<<< Updated upstream
-
-          temp_dir=$(mktemp -d)
-          repo_url="https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git"
-
-=======
           
           # Clone the repo to a temp directory for gh-pages work
           temp_dir=$(mktemp -d)
           repo_url="https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git"
           
->>>>>>> Stashed changes
           echo "📦 Cloning gh-pages branch..."
           if git clone --single-branch --branch gh-pages "$repo_url" "$temp_dir" 2>/dev/null; then
             echo "✅ gh-pages branch found"
@@ -210,22 +118,12 @@ jobs:
             cd "$temp_dir"
             git checkout --orphan gh-pages
             rm -rf ./*
-<<<<<<< Updated upstream
-            echo "# Helm repo" > README.md
-=======
             echo "# Helm Charts Repository" > README.md
->>>>>>> Stashed changes
             git add README.md
             git commit -m "Initialize gh-pages branch"
             git push origin gh-pages
             cd -
           fi
-<<<<<<< Updated upstream
-
-          cd "$temp_dir"
-
-          # Download ALL chart releases into version-named directories
-=======
           
           cd "$temp_dir"
           
@@ -239,34 +137,10 @@ jobs:
           gh release list --limit 100
           
           echo ""
->>>>>>> Stashed changes
           echo "📥 Downloading all chart releases..."
           gh release list --limit 100 | while read -r line; do
             tag=$(echo "$line" | awk '{print $1}')
             if [[ "$tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-<<<<<<< Updated upstream
-              echo "Downloading $tag..."
-              # Create directory matching the release tag (e.g., v0.1.9/)
-              mkdir -p "$tag"
-              gh release download "$tag" -D "$tag" 2>/dev/null || echo "⚠️ Failed to download $tag"
-            fi
-          done
-
-          echo "📋 Directory structure:"
-          ls -lh */*.tgz || echo "No chart files found!"
-
-          echo "🧭 Generating index.yaml..."
-          # Generate index with the base URL, Helm will append the directory structure
-          helm repo index . --url "https://github.com/${{ github.repository }}/releases/download"
-
-          echo "📄 Generated index.yaml URLs:"
-          grep "https://github.com" index.yaml | head -5
-
-          echo "📤 Committing and pushing index.yaml..."
-          git add index.yaml v*/
-          git commit -m "Update Helm repo index for v${{ steps.version_check.outputs.version }}" || echo "No changes to commit"
-          git push origin gh-pages
-=======
               echo "Processing $tag..."
               mkdir -p "$tag"
               echo "  Downloading to $tag/..."
@@ -302,6 +176,5 @@ jobs:
           
           echo ""
           echo "✅ Done! Index updated with all releases"
->>>>>>> Stashed changes
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
