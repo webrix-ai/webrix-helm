@@ -189,10 +189,18 @@ jobs:
         run: |
           git config --global user.email "github-actions@github.com"
           git config --global user.name "github-actions"
+<<<<<<< Updated upstream
 
           temp_dir=$(mktemp -d)
           repo_url="https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git"
 
+=======
+          
+          # Clone the repo to a temp directory for gh-pages work
+          temp_dir=$(mktemp -d)
+          repo_url="https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git"
+          
+>>>>>>> Stashed changes
           echo "📦 Cloning gh-pages branch..."
           if git clone --single-branch --branch gh-pages "$repo_url" "$temp_dir" 2>/dev/null; then
             echo "✅ gh-pages branch found"
@@ -202,20 +210,41 @@ jobs:
             cd "$temp_dir"
             git checkout --orphan gh-pages
             rm -rf ./*
+<<<<<<< Updated upstream
             echo "# Helm repo" > README.md
+=======
+            echo "# Helm Charts Repository" > README.md
+>>>>>>> Stashed changes
             git add README.md
             git commit -m "Initialize gh-pages branch"
             git push origin gh-pages
             cd -
           fi
+<<<<<<< Updated upstream
 
           cd "$temp_dir"
 
           # Download ALL chart releases into version-named directories
+=======
+          
+          cd "$temp_dir"
+          
+          # Clean out old structure
+          echo "🧹 Cleaning old files..."
+          find . -maxdepth 1 -type f ! -name 'README.md' ! -name '.git*' -delete
+          rm -rf v* charts
+          
+          # List all available releases
+          echo "📋 All available releases:"
+          gh release list --limit 100
+          
+          echo ""
+>>>>>>> Stashed changes
           echo "📥 Downloading all chart releases..."
           gh release list --limit 100 | while read -r line; do
             tag=$(echo "$line" | awk '{print $1}')
             if [[ "$tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+<<<<<<< Updated upstream
               echo "Downloading $tag..."
               # Create directory matching the release tag (e.g., v0.1.9/)
               mkdir -p "$tag"
@@ -237,5 +266,42 @@ jobs:
           git add index.yaml v*/
           git commit -m "Update Helm repo index for v${{ steps.version_check.outputs.version }}" || echo "No changes to commit"
           git push origin gh-pages
+=======
+              echo "Processing $tag..."
+              mkdir -p "$tag"
+              echo "  Downloading to $tag/..."
+              gh release download "$tag" -D "$tag" --pattern "*.tgz" --clobber 2>&1 || echo "⚠️ Failed to download $tag"
+              
+              # Verify what was downloaded
+              if ls "$tag"/*.tgz 1> /dev/null 2>&1; then
+                echo "  ✅ Downloaded: $(ls $tag/*.tgz)"
+              else
+                echo "  ❌ No files downloaded for $tag"
+              fi
+            fi
+          done
+          
+          echo ""
+          echo "📋 Final directory structure:"
+          find . -name "*.tgz" -type f | sort
+          
+          echo ""
+          echo "🧭 Generating index.yaml..."
+          helm repo index . --url "https://github.com/${{ github.repository }}/releases/download"
+          
+          echo ""
+          echo "📄 All URLs in generated index.yaml:"
+          grep -o 'https://github.com[^"]*\.tgz' index.yaml | sort
+          
+          echo ""
+          echo "📤 Committing and pushing to gh-pages..."
+          git add -A
+          git status
+          git commit -m "Update Helm repo index for v${{ steps.version_check.outputs.version }}" || echo "No changes to commit"
+          git push origin gh-pages
+          
+          echo ""
+          echo "✅ Done! Index updated with all releases"
+>>>>>>> Stashed changes
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
