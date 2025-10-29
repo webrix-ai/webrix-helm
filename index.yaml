@@ -2,7 +2,7 @@ apiVersion: v1
 entries:
   webrix-helm:
   - apiVersion: v2
-    created: "2025-10-29T22:37:24.359485903Z"
+    created: "2025-10-29T22:43:39.2487127Z"
     dependencies:
     - condition: postgresql.enabled
       name: postgresql
@@ -17,7 +17,7 @@ entries:
     - https://github.com/webrix-ai/webrix-helm/releases/download/charts/webrix-helm-0.1.9.tgz
     version: 0.1.9
   - apiVersion: v2
-    created: "2025-10-29T22:37:24.347203586Z"
+    created: "2025-10-29T22:43:39.237832217Z"
     dependencies:
     - condition: postgresql.enabled
       name: postgresql
@@ -32,7 +32,7 @@ entries:
     - https://github.com/webrix-ai/webrix-helm/releases/download/charts/webrix-helm-0.1.8.tgz
     version: 0.1.8
   - apiVersion: v2
-    created: "2025-10-29T22:37:24.336601299Z"
+    created: "2025-10-29T22:43:39.227815681Z"
     dependencies:
     - condition: postgresql.enabled
       name: postgresql
@@ -47,7 +47,7 @@ entries:
     - https://github.com/webrix-ai/webrix-helm/releases/download/charts/webrix-helm-0.1.7.tgz
     version: 0.1.7
   - apiVersion: v2
-    created: "2025-10-29T22:37:24.325939097Z"
+    created: "2025-10-29T22:43:39.218514906Z"
     dependencies:
     - condition: postgresql.enabled
       name: postgresql
@@ -62,7 +62,7 @@ entries:
     - https://github.com/webrix-ai/webrix-helm/releases/download/charts/webrix-helm-0.1.6.tgz
     version: 0.1.6
   - apiVersion: v2
-    created: "2025-10-29T22:37:24.316672763Z"
+    created: "2025-10-29T22:43:39.210017988Z"
     dependencies:
     - condition: postgresql.enabled
       name: postgresql
@@ -76,4 +76,4 @@ entries:
     urls:
     - https://github.com/webrix-ai/webrix-helm/releases/download/charts/webrix-helm-0.1.5.tgz
     version: 0.1.5
-generated: "2025-10-29T22:37:24.307881034Z"
+generated: "2025-10-29T22:43:39.201757965Z"
