@@ -58,40 +58,43 @@ jobs:
         id: version_check
         run: |
           chart_name=$(grep '^name:' Chart.yaml | awk '{print $2}')
-          current_version=$(grep '^version:' Chart.yaml | awk '{print $2}')
+          chart_version=$(grep '^version:' Chart.yaml | awk '{print $2}')
           
-          echo "Checking $chart_name version $current_version"
+          echo "📋 Chart: $chart_name, Current Chart.yaml version: $chart_version"
           
-          # Check if this version already exists as a release
-          if gh release view "v$current_version" &>/dev/null; then
-            echo "⚠️  Version $current_version of $chart_name already exists"
-            
-            if [ "${{ github.event.inputs.auto_bump }}" == "true" ] || [ "${{ github.event_name }}" == "push" ]; then
-              # Auto-bump patch version
-              IFS='.' read -r major minor patch <<< "$current_version"
-              new_version="$major.$minor.$((patch + 1))"
-              
-              echo "🔄 Auto-bumping to $new_version"
-              sed -i "s/^version: .*/version: $new_version/" Chart.yaml
-              
-              git add Chart.yaml
-              git commit -m "chore: bump $chart_name to $new_version [skip ci]"
-              git push
-              
-              # Re-read the updated version
-              current_version=$(grep '^version:' Chart.yaml | awk '{print $2}')
-              echo "Updated to version: $current_version"
-            else
-              echo "❌ Please bump the version in Chart.yaml"
-              exit 1
-            fi
+          # Get the latest release tag from the repository
+          latest_release_tag=$(gh release list --limit 1 --json tagName --jq '.[0].tagName' 2>/dev/null || echo "")
+          
+          if [ -z "$latest_release_tag" ]; then
+            echo "ℹ️  No existing releases found, using Chart.yaml version: $chart_version"
+            new_version="$chart_version"
           else
-            echo "✅ Version $current_version is new, proceeding with release"
+            # Remove 'v' prefix if present
+            latest_version=$(echo "$latest_release_tag" | sed 's/^v//')
+            echo "📦 Latest release found: $latest_release_tag (version: $latest_version)"
+            
+            # Bump patch version
+            IFS='.' read -r major minor patch <<< "$latest_version"
+            new_version="$major.$minor.$((patch + 1))"
+            echo "🔄 Bumping to new version: $new_version"
+          fi
+          
+          # Update Chart.yaml with the new version
+          if [ "$new_version" != "$chart_version" ]; then
+            echo "📝 Updating Chart.yaml from $chart_version to $new_version"
+            sed -i "s/^version: .*/version: $new_version/" Chart.yaml
+            
+            git add Chart.yaml
+            git commit -m "chore: bump $chart_name to $new_version [skip ci]"
+            git push
+            echo "✅ Chart.yaml updated and committed"
+          else
+            echo "ℹ️  Chart.yaml version is already up to date"
           fi
           
           # Export for later steps
           echo "chart_name=$chart_name" >> $GITHUB_OUTPUT
-          echo "version=$current_version" >> $GITHUB_OUTPUT
+          echo "version=$new_version" >> $GITHUB_OUTPUT
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
