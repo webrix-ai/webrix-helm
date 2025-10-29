@@ -1,3 +1,304 @@
 apiVersion: v1
-entries: {}
-generated: "2025-10-29T23:11:13.375974636Z"
+entries:
+  webrix-helm:
+  - apiVersion: v2
+    created: "2025-10-29T23:32:31.623445225Z"
+    dependencies:
+    - condition: postgresql.enabled
+      name: postgresql
+      repository: oci://registry-1.docker.io/bitnamicharts
+      version: 16.7.12
+    description: A unified Helm chart for deploying all Webrix services (app, connect,
+      run, db-service)
+    digest: 9579ac036f123974c12d4b56027e634a8e22c058bdc46b58dfe7dfe1722e8568
+    name: webrix-helm
+    type: application
+    urls:
+    - webrix-helm-0.1.19.tgz
+    version: 0.1.19
+  - apiVersion: v2
+    created: "2025-10-29T23:32:31.611114146Z"
+    dependencies:
+    - condition: postgresql.enabled
+      name: postgresql
+      repository: oci://registry-1.docker.io/bitnamicharts
+      version: 16.7.12
+    description: A unified Helm chart for deploying all Webrix services (app, connect,
+      run, db-service)
+    digest: b682577df2e44055c2871ce015c2546ddd1f0a68af284a074eec3dcbbf0d2b0f
+    name: webrix-helm
+    type: application
+    urls:
+    - webrix-helm-0.1.18.tgz
+    version: 0.1.18
+  - apiVersion: v2
+    created: "2025-10-29T23:32:31.598728761Z"
+    dependencies:
+    - condition: postgresql.enabled
+      name: postgresql
+      repository: oci://registry-1.docker.io/bitnamicharts
+      version: 16.7.12
+    description: A unified Helm chart for deploying all Webrix services (app, connect,
+      run, db-service)
+    digest: e2416b482451a8ffc56fa247219f0b3177582938ef1c462ac9ab132bf3fca867
+    name: webrix-helm
+    type: application
+    urls:
+    - webrix-helm-0.1.17.tgz
+    version: 0.1.17
+  - apiVersion: v2
+    created: "2025-10-29T23:32:31.586231707Z"
+    dependencies:
+    - condition: postgresql.enabled
+      name: postgresql
+      repository: oci://registry-1.docker.io/bitnamicharts
+      version: 16.7.12
+    description: A unified Helm chart for deploying all Webrix services (app, connect,
+      run, db-service)
+    digest: 4705bae31cef092f73f8ffe20b8fb0ca122376e40743af570c98d723559f6063
+    name: webrix-helm
+    type: application
+    urls:
+    - webrix-helm-0.1.16.tgz
+    version: 0.1.16
+  - apiVersion: v2
+    created: "2025-10-29T23:32:31.573858137Z"
+    dependencies:
+    - condition: postgresql.enabled
+      name: postgresql
+      repository: oci://registry-1.docker.io/bitnamicharts
+      version: 16.7.12
+    description: A unified Helm chart for deploying all Webrix services (app, connect,
+      run, db-service)
+    digest: c8d10b01cf0fa23e087363f8af6fd5f6611310e874ae7f2cd40426cf58b1fa20
+    name: webrix-helm
+    type: application
+    urls:
+    - webrix-helm-0.1.15.tgz
+    version: 0.1.15
+  - apiVersion: v2
+    created: "2025-10-29T23:32:31.561601623Z"
+    dependencies:
+    - condition: postgresql.enabled
+      name: postgresql
+      repository: oci://registry-1.docker.io/bitnamicharts
+      version: 16.7.12
+    description: A unified Helm chart for deploying all Webrix services (app, connect,
+      run, db-service)
+    digest: 3099550b98d9e8abe473d0d9a7814037ce4c3e926bdc9c626543f5fdd193eb68
+    name: webrix-helm
+    type: application
+    urls:
+    - webrix-helm-0.1.14.tgz
+    version: 0.1.14
+  - apiVersion: v2
+    created: "2025-10-29T23:32:31.549202592Z"
+    dependencies:
+    - condition: postgresql.enabled
+      name: postgresql
+      repository: oci://registry-1.docker.io/bitnamicharts
+      version: 16.7.12
+    description: A unified Helm chart for deploying all Webrix services (app, connect,
+      run, db-service)
+    digest: 509e6e1162beb207622c96c2de5c7f16ac21e46863289e06f5add7d408f3ad26
+    name: webrix-helm
+    type: application
+    urls:
+    - webrix-helm-0.1.13.tgz
+    version: 0.1.13
+  - apiVersion: v2
+    created: "2025-10-29T23:32:31.536859694Z"
+    dependencies:
+    - condition: postgresql.enabled
+      name: postgresql
+      repository: oci://registry-1.docker.io/bitnamicharts
+      version: 16.7.12
+    description: A unified Helm chart for deploying all Webrix services (app, connect,
+      run, db-service)
+    digest: 69f08211accaf0e27ce21b2a7216e7a3292d5423c8d192b4e231f38ad9220276
+    name: webrix-helm
+    type: application
+    urls:
+    - webrix-helm-0.1.12.tgz
+    version: 0.1.12
+  - apiVersion: v2
+    created: "2025-10-29T23:32:31.524277679Z"
+    dependencies:
+    - condition: postgresql.enabled
+      name: postgresql
+      repository: oci://registry-1.docker.io/bitnamicharts
+      version: 16.7.12
+    description: A unified Helm chart for deploying all Webrix services (app, connect,
+      run, db-service)
+    digest: a789318ad56a06bd6603d5fecc28b500bcb403dc5767519ff8280a74555d1fab
+    name: webrix-helm
+    type: application
+    urls:
+    - webrix-helm-0.1.11.tgz
+    version: 0.1.11
+  - apiVersion: v2
+    created: "2025-10-29T23:32:31.511116011Z"
+    dependencies:
+    - condition: postgresql.enabled
+      name: postgresql
+      repository: oci://registry-1.docker.io/bitnamicharts
+      version: 16.7.12
+    description: A unified Helm chart for deploying all Webrix services (app, connect,
+      run, db-service)
+    digest: c2f09b372d0c7684201159cb9b995b26926f3f98e8be8f5c36cd9870e9465efb
+    name: webrix-helm
+    type: application
+    urls:
+    - webrix-helm-0.1.10.tgz
+    version: 0.1.10
+  - apiVersion: v2
+    created: "2025-10-29T23:32:31.692620819Z"
+    dependencies:
+    - condition: postgresql.enabled
+      name: postgresql
+      repository: oci://registry-1.docker.io/bitnamicharts
+      version: 16.7.12
+    description: A unified Helm chart for deploying all Webrix services (app, connect,
+      run, db-service)
+    digest: 352c3e9579ca15bffcf6dc38533de4273371d00253d48deeeb4603f9b88917c6
+    name: webrix-helm
+    type: application
+    urls:
+    - webrix-helm-0.1.9.tgz
+    version: 0.1.9
+  - apiVersion: v2
+    created: "2025-10-29T23:32:31.681669018Z"
+    dependencies:
+    - condition: postgresql.enabled
+      name: postgresql
+      repository: oci://registry-1.docker.io/bitnamicharts
+      version: 16.7.12
+    description: A unified Helm chart for deploying all Webrix services (app, connect,
+      run, db-service)
+    digest: acda79580b173a010cb206107d64c291721d4dcdbcb34f0c142d3d843cac2d92
+    name: webrix-helm
+    type: application
+    urls:
+    - webrix-helm-0.1.8.tgz
+    version: 0.1.8
+  - apiVersion: v2
+    created: "2025-10-29T23:32:31.671544817Z"
+    dependencies:
+    - condition: postgresql.enabled
+      name: postgresql
+      repository: oci://registry-1.docker.io/bitnamicharts
+      version: 16.7.12
+    description: A unified Helm chart for deploying all Webrix services (app, connect,
+      run, db-service)
+    digest: f8468ecca4f166a791ab42394c9c497ae039dbb9ea72aae159cc5fcee15c72f8
+    name: webrix-helm
+    type: application
+    urls:
+    - webrix-helm-0.1.7.tgz
+    version: 0.1.7
+  - apiVersion: v2
+    created: "2025-10-29T23:32:31.661986822Z"
+    dependencies:
+    - condition: postgresql.enabled
+      name: postgresql
+      repository: oci://registry-1.docker.io/bitnamicharts
+      version: 16.7.12
+    description: A unified Helm chart for deploying all Webrix services (app, connect,
+      run, db-service)
+    digest: f648a321c78b0f69217b4b5e44d06acfe1eacf2e0b76488f95b1a64c7e0483d9
+    name: webrix-helm
+    type: application
+    urls:
+    - webrix-helm-0.1.6.tgz
+    version: 0.1.6
+  - apiVersion: v2
+    created: "2025-10-29T23:32:31.65398163Z"
+    dependencies:
+    - condition: postgresql.enabled
+      name: postgresql
+      repository: oci://registry-1.docker.io/bitnamicharts
+      version: 16.7.12
+    description: A unified Helm chart for deploying all Webrix services (app, connect,
+      run, db-service)
+    digest: 5b00819164ed6698224eb1980dc84b27141501b84fbff97799799f86de6a648a
+    name: webrix-helm
+    type: application
+    urls:
+    - webrix-helm-0.1.5.tgz
+    version: 0.1.5
+  - apiVersion: v2
+    created: "2025-10-29T23:32:31.646668647Z"
+    dependencies:
+    - condition: postgresql.enabled
+      name: postgresql
+      repository: oci://registry-1.docker.io/bitnamicharts
+      version: 16.7.12
+    description: A unified Helm chart for deploying all Webrix services (app, connect,
+      run, db-service)
+    digest: 2c97e6351d3b73a318333ee83aa82ecb70ea63ac375dc169a29408e857483a26
+    name: webrix-helm
+    type: application
+    urls:
+    - webrix-helm-0.1.4.tgz
+    version: 0.1.4
+  - apiVersion: v2
+    created: "2025-10-29T23:32:31.637874464Z"
+    dependencies:
+    - condition: postgresql.enabled
+      name: postgresql
+      repository: oci://registry-1.docker.io/bitnamicharts
+      version: 16.7.12
+    description: A unified Helm chart for deploying all Webrix services (app, connect,
+      run, db-service)
+    digest: 9480112d16a25bb9dcdeeaa4e4bfe5ce2b412f4baedbf153e584c36b36fab9a0
+    name: webrix-helm
+    type: application
+    urls:
+    - webrix-helm-0.1.3.tgz
+    version: 0.1.3
+  - apiVersion: v2
+    created: "2025-10-29T23:32:31.630020103Z"
+    dependencies:
+    - condition: postgresql.enabled
+      name: postgresql
+      repository: oci://registry-1.docker.io/bitnamicharts
+      version: 16.7.12
+    description: A unified Helm chart for deploying all Webrix services (app, connect,
+      run, db-service)
+    digest: 178ffdfe07837aa67f6d27555c573f54ea4edc0909544d56145984f69c878aee
+    name: webrix-helm
+    type: application
+    urls:
+    - webrix-helm-0.1.2.tgz
+    version: 0.1.2
+  - apiVersion: v2
+    created: "2025-10-29T23:32:31.497820037Z"
+    dependencies:
+    - condition: postgresql.enabled
+      name: postgresql
+      repository: oci://registry-1.docker.io/bitnamicharts
+      version: 16.7.12
+    description: A unified Helm chart for deploying all Webrix services (app, connect,
+      run, db-service)
+    digest: e342d3b93e2db8ad682aa3881aa7fd955d1a57f8f4971351e9ce4a0820b68422
+    name: webrix-helm
+    type: application
+    urls:
+    - webrix-helm-0.1.1.tgz
+    version: 0.1.1
+  - apiVersion: v2
+    created: "2025-10-29T23:32:31.488523087Z"
+    dependencies:
+    - condition: postgresql.enabled
+      name: postgresql
+      repository: oci://registry-1.docker.io/bitnamicharts
+      version: 16.7.12
+    description: A unified Helm chart for deploying all Webrix services (app, connect,
+      run, db-service)
+    digest: 61c58cf9589e1577bdcd0d99f0f393f51cba7af21b605f436f9fd6e1d0070081
+    name: webrix-helm
+    type: application
+    urls:
+    - webrix-helm-0.1.0.tgz
+    version: 0.1.0
+generated: "2025-10-29T23:32:31.479468005Z"
