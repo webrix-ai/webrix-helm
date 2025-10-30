@@ -56,7 +56,7 @@ jobs:
           echo "📄 Chart.yaml version: $chart_version"
           
           # Get the latest release tag from the repository
-          latest_release_tag=$(gh release list --limit 1 --json tagName --jq '.[0].tagName' 2>/dev/null || echo "")
+          latest_release_tag=$(gh api repos/${{ github.repository }}/tags --jq '.[0].name' 2>/dev/null || echo "")
           
           if [ -z "$latest_release_tag" ]; then
             echo "ℹ️  No existing releases found, using Chart.yaml version: $chart_version"
@@ -157,11 +157,18 @@ jobs:
             echo "✅ Image tags updated and committed"
           fi
 
+      - name: Pull latest commit after version bump
+        run: |
+          git fetch origin main
+          git reset --hard origin/main
+
       - name: Build chart dependencies
         run: |
           helm dependency build
 
       - name: Run chart-releaser
         uses: helm/chart-releaser-action@v1.7.0
+        with:
+          charts_dir: .
         env:
           CR_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
