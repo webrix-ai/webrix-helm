@@ -14,10 +14,11 @@ jobs:
   release_from_branch:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout main
+      - name: Checkout current branch
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          ref: ${{ github.ref }}
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Configure Git
@@ -38,10 +39,19 @@ jobs:
       - name: Determine next version
         id: version
         run: |
+          git branch
           set -euo pipefail
 
-          chart_name=$(grep '^name:' Chart.yaml | awk '{print $2}')
-          chart_version=$(grep '^version:' Chart.yaml | awk '{print $2}')
+          # Find Chart.yaml in charts directory
+          chart_file=$(find charts -mindepth 2 -maxdepth 2 -type f -name Chart.yaml | grep "webrix-helm/Chart.yaml" || true)
+          if [ -z "$chart_file" ]; then
+            echo "❌ Chart.yaml not found in charts/webrix-helm"
+            exit 1
+          fi
+          echo "📄 Found Chart.yaml at: $chart_file"
+
+          chart_name=$(grep '^name:' "$chart_file" | awk '{print $2}')
+          chart_version=$(grep '^version:' "$chart_file" | awk '{print $2}')
 
           echo "📋 Chart: $chart_name"
           echo "📄 Chart.yaml version: $chart_version"
@@ -56,8 +66,24 @@ jobs:
             echo "ℹ️  No existing releases/tags found, using Chart.yaml version: ${chart_version}"
             base_version="$chart_version"
           else
-            base_version=$(echo "$latest_release_tag" | sed 's/^v//')
-            echo "📦 Latest found: ${latest_release_tag} (version: ${base_version})"
+            echo "📦 Latest found: ${latest_release_tag}"
+            # Extract version from tag - handle formats like:
+            # - v0.1.20 -> 0.1.20
+            # - webrix-helm-0.1.20 -> 0.1.20
+            # - 0.1.20 -> 0.1.20
+            # Try to extract semver pattern (X.Y.Z) from the tag
+            base_version=$(echo "$latest_release_tag" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1)
+            if [ -z "$base_version" ]; then
+              # Fallback: remove v prefix and common chart name prefixes
+              base_version=$(echo "$latest_release_tag" | sed 's/^v//' | sed "s/^${chart_name}-//")
+            fi
+            echo "📦 Extracted version: ${base_version}"
+          fi
+
+          # Validate we got a proper semver version
+          if ! echo "$base_version" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "⚠️  Could not extract valid version from tag, using Chart.yaml version: ${chart_version}"
+            base_version="$chart_version"
           fi
 
           IFS='.' read -r major minor patch <<< "$base_version"
@@ -73,31 +99,39 @@ jobs:
 
           echo "new_version=$new_version" >> $GITHUB_OUTPUT
           echo "chart_name=$chart_name" >> $GITHUB_OUTPUT
+          echo "chart_file=$chart_file" >> $GITHUB_OUTPUT
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Create/checkout release branch
+      - name: Create/checkout release branch from current branch
         run: |
           set -euo pipefail
           branch_name="release/chart/v${{ steps.version.outputs.new_version }}"
-          echo "🪵 Using branch: ${branch_name}"
-          git fetch origin main
-          # Create or reset the branch to origin/main to be deterministic
+          current_branch="${{ github.ref_name }}"
+          current_commit=$(git rev-parse HEAD)
+          
+          echo "🪵 Current branch: ${current_branch}"
+          echo "🪵 Current commit: ${current_commit}"
+          echo "🪵 Creating release branch: ${branch_name} from current branch"
+          
+          # Create or reset the release branch from current commit
           if git show-ref --verify --quiet refs/heads/"${branch_name}"; then
             git checkout "${branch_name}"
-            git reset --hard origin/main
+            git reset --hard "$current_commit"
           else
-            git checkout -B "${branch_name}" origin/main
+            git checkout -B "${branch_name}" "$current_commit"
           fi
+          echo "✅ Release branch ${branch_name} created from ${current_branch} (commit: ${current_commit})"
 
       - name: Update Chart.yaml version
         run: |
           set -euo pipefail
-          sed -i "s/^version: .*/version: ${{ steps.version.outputs.new_version }}/" Chart.yaml
-          if git diff --quiet Chart.yaml; then
+          chart_file="${{ steps.version.outputs.chart_file }}"
+          sed -i "s/^version: .*/version: ${{ steps.version.outputs.new_version }}/" "$chart_file"
+          if git diff --quiet "$chart_file"; then
             echo "ℹ️  No version change needed in Chart.yaml"
           else
-            git add Chart.yaml
+            git add "$chart_file"
             git commit -m "chore: bump ${{ steps.version.outputs.chart_name }} to ${{ steps.version.outputs.new_version }} [skip ci]"
           fi
 
@@ -105,9 +139,25 @@ jobs:
         run: |
           echo "🔄 Updating image tags from latest GitHub tags..."
 
+          # Find values.yaml in the same directory as Chart.yaml
+          chart_file="${{ steps.version.outputs.chart_file }}"
+          chart_dir=$(dirname "$chart_file")
+          values_file="$chart_dir/values.yaml"
+          
+          if [ ! -f "$values_file" ]; then
+            echo "⚠️  values.yaml not found at $values_file, skipping image tag updates"
+            exit 0
+          fi
+          
+          echo "📄 Using values.yaml at: $values_file"
+
           get_latest_tag() {
-            local repo=$1
-            gh api "repos/$repo/tags?per_page=1" --jq '.[0].name' 2>/dev/null || echo "latest"
+            local repo="webrix/mcp-s-app"
+            local latest_sha
+            latest_sha=$(curl -s "https://quay.io/api/v1/repository/$repo/tag/?onlyActiveTags=true&limit=100" \
+              | jq -r '.tags[] | select(.name == "latest") | .manifest_digest')
+            curl -s "https://quay.io/api/v1/repository/$repo/tag/?onlyActiveTags=true&limit=100" \
+              | jq -r --arg sha "$latest_sha" '.tags[] | select(.manifest_digest == $sha and .name != "latest") | .name' | head -n 1
           }
 
           declare -A repo_mapping=(
@@ -125,25 +175,54 @@ jobs:
             echo "🏷️  Latest tag for $service: $latest_tag"
             if [ "$latest_tag" != "latest" ] && [ -n "$latest_tag" ]; then
               clean_tag=$(echo "$latest_tag" | sed 's/^v//')
-              awk -v service="$service" -v new_tag="$clean_tag" '
-                BEGIN { in_service = 0 }
-                /^deployments:/ { in_deployments = 1; next }
-                in_deployments && /^  [a-zA-Z]/ && !/^  '"$service"':/ { in_service = 0 }
-                in_deployments && /^  '"$service"':/ { in_service = 1; print; next }
-                in_service && /^    tag:/ { print "    tag: \"" new_tag "\""; next }
-                { print }
-              ' values.yaml > values.yaml.tmp && mv values.yaml.tmp values.yaml
+              yq -i ".deployments.${service}.image.tag = \"${clean_tag}\"" "$values_file"
             fi
           done
 
-          if git diff --quiet values.yaml; then
+          if git diff --quiet "$values_file"; then
             echo "ℹ️  No image tag changes detected"
           else
-            git add values.yaml
+            git add "$values_file"
             git commit -m "chore: update image tags for v${{ steps.version.outputs.new_version }} [skip ci]"
           fi
         env:
           GH_TOKEN: ${{ secrets.GHA_PAT }}
+
+      - name: Fetch all tags
+        run: |
+          git fetch --tags --force
+          echo "📋 Available tags:"
+          git tag -l | sort -V
+
+      - name: Merge latest tag into branch history
+        run: |
+          set -euo pipefail
+          branch_name="release/chart/v${{ steps.version.outputs.new_version }}"
+          
+          # Get the actual latest release tag (not just ancestor)
+          latest_tag=$(git tag -l 'v*' | sort -V | tail -1)
+          echo "📦 Latest tag: $latest_tag"
+          
+          if [ -n "$latest_tag" ]; then
+            tag_commit=$(git rev-parse "$latest_tag")
+            current_commit=$(git rev-parse HEAD)
+            
+            # Check if tag is already an ancestor of current commit
+            if git merge-base --is-ancestor "$tag_commit" "$current_commit" 2>/dev/null; then
+              echo "✅ Tag $latest_tag is already in branch history"
+            else
+              echo "🔗 Merging tag $latest_tag into branch history so chart-releaser can find it..."
+              # Merge the tag commit to make it reachable from this branch
+              # Use --no-edit to accept default message, allow-unrelated-histories in case tag is on different branch
+              git merge --no-edit --no-ff "$tag_commit" -m "Merge tag $latest_tag into release branch for chart-releaser history" || \
+              git merge --no-edit --no-ff --allow-unrelated-histories "$tag_commit" -m "Merge tag $latest_tag into release branch for chart-releaser history"
+              echo "✅ Tag merged into branch history"
+            fi
+            
+            # Verify git describe can now find it
+            described_tag=$(git describe --tags --abbrev=0 2>/dev/null || echo "none")
+            echo "🔍 git describe now finds: $described_tag"
+          fi
 
       - name: Push release branch
         run: |
@@ -152,18 +231,62 @@ jobs:
 
       - name: Build chart dependencies
         run: |
-          helm dependency build
+          chart_file="${{ steps.version.outputs.chart_file }}"
+          chart_dir=$(dirname "$chart_file")
+          echo "📦 Building dependencies for chart in: $chart_dir"
+          helm dependency build "$chart_dir"
       
-      - name: debug branch
+      - name: Verify git state for chart-releaser
         run: |
+          echo "=== Current branch and commit ==="
           git branch
-          ls -ltr
-          cat Chart.yaml
+          git log --oneline -5
+          echo ""
+          echo "=== Tag verification (after merge) ==="
+          latest_tag=$(git describe --tags --abbrev=0 2>/dev/null || echo "none")
+          echo "Latest tag found by git describe: $latest_tag"
+          
+          # Get the actual latest tag
+          actual_latest=$(git tag -l 'v*' | sort -V | tail -1)
+          echo "Actual latest tag in repo: $actual_latest"
+          
+          if [ "$latest_tag" = "$actual_latest" ]; then
+            echo "✅ SUCCESS: git describe finds the correct latest tag!"
+          else
+            echo "⚠️  WARNING: git describe found $latest_tag but latest is $actual_latest"
+          fi
+          
+          if [ "$latest_tag" != "none" ]; then
+            chart_file="${{ steps.version.outputs.chart_file }}"
+            echo ""
+            echo "=== Diff Chart.yaml between tag and HEAD ==="
+            git diff $latest_tag..HEAD -- "$chart_file" || echo "No diff in Chart.yaml"
+          fi
+
+      - name: Verify chart structure for chart-releaser
+        run: |
+          echo "=== Checking chart structure ==="
+          chart_file="${{ steps.version.outputs.chart_file }}"
+          chart_dir=$(dirname "$chart_file")
+          
+          if [ -f "$chart_file" ]; then
+            echo "✅ Chart.yaml found at: $chart_file"
+            echo "📁 Chart directory: $chart_dir"
+            
+            # Verify charts directory structure
+            if [ -d "charts" ]; then
+              echo "✅ charts/ directory exists"
+              ls -la charts/
+            else
+              echo "⚠️  charts/ directory not found"
+            fi
+          else
+            echo "❌ Chart.yaml not found at: $chart_file"
+            exit 1
+          fi
 
       - name: Run chart-releaser
         uses: helm/chart-releaser-action@v1.7.0
-        with:
-          charts_dir: ./
         env:
           CR_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
 
