@@ -89,7 +89,7 @@ jobs:
           echo "chart_name=$chart_name" >> $GITHUB_OUTPUT
           echo "version=$new_version" >> $GITHUB_OUTPUT
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GHA_PAT }}
 
       - name: Update image tags from latest tags
         run: |
@@ -156,6 +156,8 @@ jobs:
             git push
             echo "✅ Image tags updated and committed"
           fi
+        env:
+          GH_TOKEN: ${{ secrets.GHA_PAT }}
 
       - name: Pull latest commit after version bump
         run: |
