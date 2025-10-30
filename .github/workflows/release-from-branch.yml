@@ -1,0 +1,162 @@
+name: Release Helm Chart From Branch
+
+on:
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+concurrency:
+  group: chart-release
+  cancel-in-progress: false
+
+jobs:
+  release_from_branch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure Git
+        run: |
+          git config user.name "$GITHUB_ACTOR"
+          git config user.email "$GITHUB_ACTOR@users.noreply.github.com"
+
+      - name: Auth GH CLI
+        run: gh auth setup-git
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: v3.12.0
+
+      - name: Determine next version
+        id: version
+        run: |
+          set -euo pipefail
+
+          chart_name=$(grep '^name:' Chart.yaml | awk '{print $2}')
+          chart_version=$(grep '^version:' Chart.yaml | awk '{print $2}')
+
+          echo "📋 Chart: $chart_name"
+          echo "📄 Chart.yaml version: $chart_version"
+
+          # Prefer latest release tag; fallback to latest tag
+          latest_release_tag=$(gh api repos/${{ github.repository }}/releases --jq '.[0].tag_name' 2>/dev/null || echo "")
+          if [ -z "${latest_release_tag}" ] || [ "${latest_release_tag}" = "null" ]; then
+            latest_release_tag=$(gh api repos/${{ github.repository }}/tags --jq '.[0].name' 2>/dev/null || echo "")
+          fi
+
+          if [ -z "${latest_release_tag}" ] || [ "${latest_release_tag}" = "null" ]; then
+            echo "ℹ️  No existing releases/tags found, using Chart.yaml version: ${chart_version}"
+            base_version="$chart_version"
+          else
+            base_version=$(echo "$latest_release_tag" | sed 's/^v//')
+            echo "📦 Latest found: ${latest_release_tag} (version: ${base_version})"
+          fi
+
+          IFS='.' read -r major minor patch <<< "$base_version"
+          # Handle case where base_version could be empty
+          if [ -z "${major:-}" ] || [ -z "${minor:-}" ] || [ -z "${patch:-}" ]; then
+            major=$(echo "$chart_version" | cut -d. -f1)
+            minor=$(echo "$chart_version" | cut -d. -f2)
+            patch=$(echo "$chart_version" | cut -d. -f3)
+          fi
+
+          new_version="$major.$minor.$((patch + 1))"
+          echo "🔄 Next version: $new_version"
+
+          echo "new_version=$new_version" >> $GITHUB_OUTPUT
+          echo "chart_name=$chart_name" >> $GITHUB_OUTPUT
+
+      - name: Create/checkout release branch
+        run: |
+          set -euo pipefail
+          branch_name="release/chart/v${{ steps.version.outputs.new_version }}"
+          echo "🪵 Using branch: ${branch_name}"
+          git fetch origin main
+          # Create or reset the branch to origin/main to be deterministic
+          if git show-ref --verify --quiet refs/heads/"${branch_name}"; then
+            git checkout "${branch_name}"
+            git reset --hard origin/main
+          else
+            git checkout -B "${branch_name}" origin/main
+          fi
+
+      - name: Update Chart.yaml version
+        run: |
+          set -euo pipefail
+          sed -i "s/^version: .*/version: ${{ steps.version.outputs.new_version }}/" Chart.yaml
+          if git diff --quiet Chart.yaml; then
+            echo "ℹ️  No version change needed in Chart.yaml"
+          else
+            git add Chart.yaml
+            git commit -m "chore: bump ${{ steps.version.outputs.chart_name }} to ${{ steps.version.outputs.new_version }} [skip ci]"
+          fi
+
+      - name: Update image tags from latest tags
+        run: |
+          echo "🔄 Updating image tags from latest GitHub tags..."
+
+          get_latest_tag() {
+            local repo=$1
+            gh api "repos/$repo/tags?per_page=1" --jq '.[0].name' 2>/dev/null || echo "latest"
+          }
+
+          declare -A repo_mapping=(
+            ["app"]="webrix-ai/mcp-s-app"
+            ["run"]="webrix-ai/mcp-s-run"
+            ["connect"]="webrix-ai/mcp-s-connect"
+            ["dbService"]="webrix-ai/mcp-s-db-service"
+          )
+
+          changed=0
+          for service in "${!repo_mapping[@]}"; do
+            repo="${repo_mapping[$service]}"
+            echo "📦 Checking latest tag for $service (repo: $repo)..."
+            latest_tag=$(get_latest_tag "$repo")
+            echo "🏷️  Latest tag for $service: $latest_tag"
+            if [ "$latest_tag" != "latest" ] && [ -n "$latest_tag" ]; then
+              clean_tag=$(echo "$latest_tag" | sed 's/^v//')
+              awk -v service="$service" -v new_tag="$clean_tag" '
+                BEGIN { in_service = 0 }
+                /^deployments:/ { in_deployments = 1; next }
+                in_deployments && /^  [a-zA-Z]/ && !/^  '"$service"':/ { in_service = 0 }
+                in_deployments && /^  '"$service"':/ { in_service = 1; print; next }
+                in_service && /^    tag:/ { print "    tag: \"" new_tag "\""; next }
+                { print }
+              ' values.yaml > values.yaml.tmp && mv values.yaml.tmp values.yaml
+            fi
+          done
+
+          if git diff --quiet values.yaml; then
+            echo "ℹ️  No image tag changes detected"
+          else
+            git add values.yaml
+            git commit -m "chore: update image tags for v${{ steps.version.outputs.new_version }} [skip ci]"
+          fi
+        env:
+          GH_TOKEN: ${{ secrets.GHA_PAT }}
+
+      - name: Push release branch
+        run: |
+          branch_name="release/chart/v${{ steps.version.outputs.new_version }}"
+          git push -u origin "$branch_name"
+
+      - name: Build chart dependencies
+        run: |
+          helm dependency build
+
+      - name: Run chart-releaser
+        uses: helm/chart-releaser-action@v1.7.0
+        with:
+          charts_dir: .
+        env:
+          CR_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
+
+
