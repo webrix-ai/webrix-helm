@@ -40,6 +40,14 @@ spec:
                 name: {{ printf "%s-secret" $serviceName | lower }}
           resources:
             {{- toYaml $serviceConfig.resources | nindent 12 }}
+          {{- with $serviceConfig.readinessProbe }}
+          readinessProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with $serviceConfig.livenessProbe }}
+          livenessProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
           {{- with $serviceConfig.nodeSelector }}
           nodeSelector:
             {{- toYaml . | nindent 12 }}

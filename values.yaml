@@ -53,7 +53,12 @@ deployments:
       PORT: "3000"
       ORG: "on-prem-org"
       ON_PREM: "true"
-      AUTH_SECRET: "aUi2V5iCVqUrbrdjKty1zH4HCqszXArV9BLVU2giqhY="
+
+    # Health check probes
+    readinessProbe: {}
+    livenessProbe: {}
+
+    secrets: {}
 
     ingress:
       enabled: true
@@ -101,7 +106,10 @@ deployments:
       ORG: "on-prem-org"
       ON_PREM: "true"
       DEBUG: "true"
-      AUTH_SECRET: "aUi2V5iCVqUrbrdjKty1zH4HCqszXArV9BLVU2giqhY="
+
+    # Health check probes
+    readinessProbe: {}
+    livenessProbe: {}
     
     ingress:
       enabled: true
@@ -148,6 +156,10 @@ deployments:
       PORT: "3000"
       ORG: "on-prem-org"
       LOG_LEVEL: "info"
+
+    # Health check probes
+    readinessProbe: {}
+    livenessProbe: {}
     
     ingress:
       enabled: true
@@ -205,7 +217,24 @@ deployments:
       POSTGRES_HOST_AUTH_METHOD: "trust"
       RATE_LIMIT_MAX: "1000"
       RATE_LIMIT_WINDOW: "60000"
-      AUTH_SECRET: "ZI39UlR2sN6HFZauuze0iNEZnNkF1wiOuGklm3bC8dk="
+
+    # Health check probes
+    readinessProbe:
+      httpGet:
+        path: /readyz
+        port: 3000
+      initialDelaySeconds: 10
+      periodSeconds: 5
+      timeoutSeconds: 5
+      failureThreshold: 10
+    livenessProbe:
+      httpGet:
+        path: /healthz
+        port: 3000
+      initialDelaySeconds: 30
+      periodSeconds: 10
+      timeoutSeconds: 5
+      failureThreshold: 3
     
     extraEnv:
       DATABASE_URL: "postgres://postgres:postgres@webrix-postgresql:5432/postgres?sslmode=disable"
@@ -221,10 +250,7 @@ deployments:
       tls: []
 
 # Shared environment variables
-sharedEnv:
-  DB_AUTH_SECRET: "ZI39UlR2sN6HFZauuze0iNEZnNkF1wiOuGklm3bC8dk="
-  AUTO_AUTHENTICATE_TOKEN: "balQgAqCpKW979XoibTYSbfCjvj7uSJK+90m0iQG5"
-  ENCRYPTION_KEY: "iL7wUJhqRMPFY0asXqLAn1JjW9kv0OqC4NHtqKHt5VY="
+
 
 # PostgreSQL configuration
 postgresql:

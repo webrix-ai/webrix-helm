@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - main
-      - first-branch-refactoring
     paths:
       - 'Chart.yaml'
       - 'values.yaml'
@@ -37,6 +36,11 @@ jobs:
           git config user.name "$GITHUB_ACTOR"
           git config user.email "$GITHUB_ACTOR@users.noreply.github.com"
 
+      - name: Auth GH CLI
+        run: gh auth setup-git
+        env:
+          GH_TOKEN: ${{ secrets.GHA_PAT }}
+
       - name: Install Helm
         uses: azure/setup-helm@v4
         with:
@@ -46,114 +50,125 @@ jobs:
         id: version_check
         run: |
           chart_name=$(grep '^name:' Chart.yaml | awk '{print $2}')
-          current_version=$(grep '^version:' Chart.yaml | awk '{print $2}')
+          chart_version=$(grep '^version:' Chart.yaml | awk '{print $2}')
           
-          echo "Checking $chart_name version $current_version"
+          echo "📋 Chart: $chart_name"
+          echo "📄 Chart.yaml version: $chart_version"
           
-          # Check if this version already exists as a release
-          if gh release view "v$current_version" &>/dev/null; then
-            echo "⚠️  Version $current_version of $chart_name already exists"
-            
-            if [ "${{ github.event.inputs.auto_bump }}" == "true" ] || [ "${{ github.event_name }}" == "push" ]; then
-              # Auto-bump patch version
-              IFS='.' read -r major minor patch <<< "$current_version"
-              new_version="$major.$minor.$((patch + 1))"
-              
-              echo "🔄 Auto-bumping to $new_version"
-              sed -i "s/^version: .*/version: $new_version/" Chart.yaml
-              
-              git add Chart.yaml
-              git commit -m "chore: bump $chart_name to $new_version [skip ci]"
-              git push
-              
-              # Re-read the updated version
-              current_version=$(grep '^version:' Chart.yaml | awk '{print $2}')
-              echo "Updated to version: $current_version"
-            else
-              echo "❌ Please bump the version in Chart.yaml"
-              exit 1
-            fi
+          # Get the latest release tag from the repository
+          latest_release_tag=$(gh api repos/${{ github.repository }}/tags --jq '.[0].name' 2>/dev/null || echo "")
+          
+          if [ -z "$latest_release_tag" ]; then
+            echo "ℹ️  No existing releases found, using Chart.yaml version: $chart_version"
+            new_version="$chart_version"
           else
-            echo "✅ Version $current_version is new, proceeding with release"
+            # Remove 'v' prefix if present
+            latest_version=$(echo "$latest_release_tag" | sed 's/^v//')
+            echo "📦 Latest release found: $latest_release_tag (version: $latest_version)"
+            
+            # Bump patch version from latest release
+            IFS='.' read -r major minor patch <<< "$latest_version"
+            new_version="$major.$minor.$((patch + 1))"
+            echo "🔄 Bumping to new version: $new_version"
+          fi
+          
+          # Update Chart.yaml with the new version
+          if [ "$new_version" != "$chart_version" ]; then
+            echo "📝 Updating Chart.yaml from $chart_version to $new_version"
+            sed -i "s/^version: .*/version: $new_version/" Chart.yaml
+            
+            git add Chart.yaml
+            git commit -m "chore: bump $chart_name to $new_version [skip ci]"
+            git push
+            echo "✅ Chart.yaml updated and committed"
+          else
+            echo "ℹ️  Chart.yaml version is already up to date"
           fi
           
           # Export for later steps
           echo "chart_name=$chart_name" >> $GITHUB_OUTPUT
-          echo "version=$current_version" >> $GITHUB_OUTPUT
+          echo "version=$new_version" >> $GITHUB_OUTPUT
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Package Helm chart
+      - name: Update image tags from latest tags
         run: |
-          helm package .
+          echo "🔄 Updating image tags from latest GitHub tags..."
           
-      - name: Create GitHub release
-        run: |
-          chart_name="${{ steps.version_check.outputs.chart_name }}"
-          version="${{ steps.version_check.outputs.version }}"
-          
-          # Create release and upload chart package
-          gh release create "v$version" \
-            "$chart_name-$version.tgz" \
-            --title "$chart_name $version" \
-            --notes "Release of $chart_name version $version"
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      
-      - name: Update Helm repo index
-        run: |
-          # Clone the repo to a temp directory for gh-pages work
-          temp_dir=$(mktemp -d)
-          git clone --single-branch --branch gh-pages "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" "$temp_dir" 2>/dev/null || {
-            # Branch doesn't exist, create it
-            git clone "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" "$temp_dir"
-            cd "$temp_dir"
-            git checkout --orphan gh-pages
-            git rm -rf . 2>/dev/null || true
-            cd -
+          # Function to get latest tag
+          get_latest_tag() {
+            local repo=$1
+            # Get tags sorted by creation time (most recent first), take the first one
+            gh api "repos/$repo/tags?per_page=1" --jq '.[0].name' 2>/dev/null || echo "latest"
           }
           
-          cd "$temp_dir"
+          # Repository mappings
+          declare -A repo_mapping=(
+            ["app"]="webrix-ai/mcp-s-app"
+            ["run"]="webrix-ai/mcp-s-run"
+            ["connect"]="webrix-ai/mcp-s-connect"
+            ["dbService"]="webrix-ai/mcp-s-db-service"
+          )
           
-          # Download all chart releases
-          mkdir -p charts
-          gh release list --limit 100 | while read -r line; do
-            tag=$(echo "$line" | awk '{print $1}')
-            if [[ "$tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-              echo "Downloading release: $tag"
-              gh release download "$tag" -D charts/ 2>/dev/null || echo "Failed to download $tag, skipping..."
+          # Update image tags for each service
+          for service in "${!repo_mapping[@]}"; do
+            repo="${repo_mapping[$service]}"
+            echo "📦 Checking latest tag for $service (repo: $repo)..."
+            
+            latest_tag=$(get_latest_tag "$repo")
+            echo "🏷️  Latest tag for $service: $latest_tag"
+            
+            if [ "$latest_tag" != "latest" ]; then
+              # Remove 'v' prefix if present
+              clean_tag=$(echo "$latest_tag" | sed 's/^v//')
+              
+              # Update the image tag in values.yaml for the specific service
+              # Use awk to update only the tag within the specific service section
+              awk -v service="$service" -v new_tag="$clean_tag" '
+                BEGIN { in_service = 0 }
+                /^deployments:/ { in_deployments = 1; next }
+                in_deployments && /^  [a-zA-Z]/ && !/^  '$service':/ { in_service = 0 }
+                in_deployments && /^  '$service':/ { in_service = 1; print; next }
+                in_service && /^    tag:/ { print "    tag: \"" new_tag "\""; next }
+                { print }
+              ' values.yaml > values.yaml.tmp && mv values.yaml.tmp values.yaml
+              
+              echo "✅ Updated $service image tag to: $clean_tag"
+            else
+              echo "⚠️  Could not fetch latest tag for $service, keeping current tag"
             fi
           done
           
-          # Generate index.yaml
-          helm repo index charts --url "https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}"
-          
-          # Move index to root and keep charts directory
-          cp charts/index.yaml .
-          
-          # Commit and push
-          git add index.yaml charts/
-          git commit -m "Update Helm repository index for v${{ steps.version_check.outputs.version }}" || echo "No changes to commit"
-          git push origin gh-pages
-          
-          # Copy index.yaml back to main workspace for Pages deployment
-          cp index.yaml "$GITHUB_WORKSPACE/"
+          # Show the changes
+          echo "📋 Updated image tags:"
+          grep -A 1 "repository: quay.io/webrix/mcp-s-" values.yaml || echo "No image repositories found"
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GHA_PAT }}
 
-      - name: Setup Pages
-        uses: actions/configure-pages@v4
-
-      - name: Prepare Pages artifact
+      - name: Commit updated image tags
         run: |
-          mkdir -p _site
-          cp index.yaml _site/
-          
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: _site
+          if git diff --quiet values.yaml; then
+            echo "ℹ️  No changes to commit in values.yaml"
+          else
+            echo "📝 Committing updated image tags..."
+            git add values.yaml
+            git commit -m "chore: update image tags from latest releases [skip ci]"
+            git push
+            echo "✅ Image tags updated and committed"
+          fi
 
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
+      - name: Pull latest commit after version bump
+        run: |
+          git fetch origin main
+          git reset --hard origin/main
+
+      - name: Build chart dependencies
+        run: |
+          helm dependency build
+
+      - name: Run chart-releaser
+        uses: helm/chart-releaser-action@v1.7.0
+        with:
+          charts_dir: .
+        env:
+          CR_TOKEN: "${{ secrets.GITHUB_TOKEN }}"

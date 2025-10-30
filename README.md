@@ -223,6 +223,37 @@ helm install webrix-helm . --values values.yaml --namespace webrix-prod
 | `deployments.<service>.resources.limits.cpu` | `"1000m"` | CPU limit |
 | `deployments.<service>.resources.limits.memory` | `"2048Mi"` | Memory limit |
 
+### Health Check Probes
+
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `deployments.<service>.readinessProbe` | `{}` | Readiness probe configuration (empty = disabled) |
+| `deployments.<service>.livenessProbe` | `{}` | Liveness probe configuration (empty = disabled) |
+
+**Probe Configuration Examples:**
+
+```yaml
+deployments:
+  app:
+    readinessProbe:
+      httpGet:
+        path: /health
+        port: 3000
+      initialDelaySeconds: 10
+      periodSeconds: 5
+      timeoutSeconds: 3
+      failureThreshold: 3
+    
+    livenessProbe:
+      httpGet:
+        path: /health
+        port: 3000
+      initialDelaySeconds: 30
+      periodSeconds: 10
+      timeoutSeconds: 5
+      failureThreshold: 3
+```
+
 ### Ingress Configuration
 
 | Parameter | Default | Description |
