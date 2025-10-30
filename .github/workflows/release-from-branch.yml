@@ -73,6 +73,8 @@ jobs:
 
           echo "new_version=$new_version" >> $GITHUB_OUTPUT
           echo "chart_name=$chart_name" >> $GITHUB_OUTPUT
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Create/checkout release branch
         run: |
@@ -146,16 +148,22 @@ jobs:
       - name: Push release branch
         run: |
           branch_name="release/chart/v${{ steps.version.outputs.new_version }}"
-          git push -u origin "$branch_name"
+          git push --force-with-lease -u origin "$branch_name"
 
       - name: Build chart dependencies
         run: |
           helm dependency build
+      
+      - name: debug branch
+        run: |
+          git branch
+          ls -ltr
+          cat Chart.yaml
 
       - name: Run chart-releaser
         uses: helm/chart-releaser-action@v1.7.0
         with:
-          charts_dir: .
+          charts_dir: ./
         env:
           CR_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
 
