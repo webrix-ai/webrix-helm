@@ -17,7 +17,6 @@ global:
   annotations: {}
 
 # Application deployments configuration
-deployments:
   app:
     enabled: true
     replicas: 1
