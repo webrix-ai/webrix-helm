@@ -2,7 +2,7 @@ apiVersion: v2
 name: webrix-helm
 description: A unified Helm chart for deploying all Webrix services (app, connect, run, db-service)
 type: application
-version: 0.1.1
+version: 0.1.28
 
 dependencies:
   - name: postgresql
