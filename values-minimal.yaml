@@ -3,9 +3,6 @@
 
 # Global configuration
 global:
-  # Database provider: "postgresql" for in-cluster db, or "external" for external db
-  db_provider: "postgresql"
-  
   # Domain configuration
   domain:
     host: "webrix.local"
@@ -15,33 +12,28 @@ deployments:
   # Webrix App service
   app:
     ingress:
-      subdomain: "webrix-app"
-    env:
-      AUTH_TRUST_HOST: "true"
-      TEST_ENV: "test"
+      subdomain: "onprem-app"
  
   connect:
     ingress:
-      subdomain: "webrix-connect"
+      subdomain: "onprem-connect"
 
   run:
     ingress:
-      subdomain: "webrix-run"
-
-  dbService:
-    ingress:
-      subdomain: "webrix-dbservice"
+      subdomain: "onprem-run"
+      
 
 # PostgreSQL configuration (only used if db_provider is "postgresql")
 postgresql:
   enabled: true
   auth:
+    enablePostgresUser: true
     postgresPassword: "webrix123"
     database: "webrix"
   primary:
     persistence:
       enabled: true
-      size: 2Gi
+      size: 1Gi
 
 ingress:
   enabled: true

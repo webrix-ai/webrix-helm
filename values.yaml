@@ -19,6 +19,7 @@ global:
   # Common annotations applied to all resources
   annotations: {}
 
+  sharedEnv: {}
 # Application deployments configuration
 deployments:
   app:
