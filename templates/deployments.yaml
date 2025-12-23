@@ -38,6 +38,10 @@ spec:
                 name: {{ printf "%s-config" $serviceName | lower }}
             - secretRef:
                 name: {{ printf "%s-secret" $serviceName | lower }}
+            {{- if $serviceConfig.secretName }}
+            - secretRef:
+                name: {{ $serviceConfig.secretName }}
+            {{- end }}
           resources:
             {{- toYaml $serviceConfig.resources | nindent 12 }}
           {{- with $serviceConfig.readinessProbe }}

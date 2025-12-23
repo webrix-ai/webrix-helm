@@ -10,25 +10,22 @@ metadata:
     {{- include "webrix.labels" $ | nindent 4 }}
     app: {{ $serviceName }}
 data:
+  {{- if eq $serviceName "dbService" }}
+  DATABASE_URL: {{ include "webrix.databaseUrl" $ | quote }}
+  {{- end }}
   {{- range $key, $value := $serviceConfig.env }}
+  {{- if not (and (eq $serviceName "dbService") (eq $key "DATABASE_URL")) }}
   {{ $key }}: {{ $value | quote }}
+  {{- end }}
   {{- end }}
   {{- range $key, $value := $.Values.sharedEnv }}
   {{ $key }}: {{ $value | quote }}
   {{- end }}
-  {{- range $key, $value := $serviceConfig.extraEnv }}
-  {{- if and (eq $key "DATABASE_URL") (eq $serviceName "dbService") }}
-  {{ $key }}: {{ include "webrix.databaseUrl" $ | quote }}
-  {{- else }}
-  {{ $key }}: {{ $value | quote }}
-  {{- end }}
-  {{- end }}
   CONNECT_URL: "https://{{ $.Values.deployments.connect.ingress.subdomain }}.{{ $.Values.global.domain.host }}"
   RUN_URL: "https://{{ $.Values.deployments.run.ingress.subdomain }}.{{ $.Values.global.domain.host }}"
-  DB_SERVICE_URL: "https://{{ $.Values.deployments.dbService.ingress.subdomain }}.{{ $.Values.global.domain.host }}"
-  BASE_URL: "https://{{ $serviceConfig.ingress.subdomain }}.{{ $.Values.global.domain.host }}"
-  NEXTAUTH_URL: "https://{{ $serviceConfig.ingress.subdomain }}.{{ $.Values.global.domain.host }}"
-  DB_BASE_URL: "https://{{ $.Values.deployments.dbService.ingress.subdomain }}.{{ $.Values.global.domain.host }}"
-  NEXT_PUBLIC_CONNECT_URL: "https://{{ $.Values.deployments.connect.ingress.subdomain }}.{{ $.Values.global.domain.host }}"
+  AUTH_URL: "https://{{ $.Values.deployments.app.ingress.subdomain }}.{{ $.Values.global.domain.host }}"
+  DB_BASE_URL: "http://dbService"
+  ON_PREM: {{ $.Values.global.ON_PREM | default true }}
+  ORG: {{ $.Values.global.ORG | default "on-prem-org" }}
 {{- end }}
 {{- end }}
