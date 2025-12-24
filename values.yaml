@@ -9,6 +9,9 @@ global:
   # Global domain configuration
   domain:
     host: "blahblah.com"
+
+  ON_PREM: true
+  ORG: "on-prem-org"
   
   # Common labels applied to all resources
   labels: {}
@@ -16,6 +19,7 @@ global:
   # Common annotations applied to all resources
   annotations: {}
 
+  sharedEnv: {}
 # Application deployments configuration
 deployments:
   app:
@@ -51,14 +55,16 @@ deployments:
     
     env:
       PORT: "3000"
-      ORG: "on-prem-org"
-      ON_PREM: "true"
+      DB_AUTH_SECRET: "ZI39UlR2sN6HFZauuze0iNEZnNkF1wiOuGklm3bC8dk="
+      AUTH_SECRET: "aUi2V5iCVqUrbrdjKty1zH4HCqszXArV9BLVU2giqhY="
 
     # Health check probes
     readinessProbe: {}
     livenessProbe: {}
 
-    secrets: {}
+
+    # Optional: name of an existing secret to mount as environment variables
+    # secretName: "my-existing-secret"
 
     ingress:
       enabled: true
@@ -103,9 +109,10 @@ deployments:
     
     env:
       PORT: "3000"
-      ORG: "on-prem-org"
-      ON_PREM: "true"
       DEBUG: "true"
+      AUTH_TRUST_HOST: "true"
+      DB_AUTH_SECRET: "ZI39UlR2sN6HFZauuze0iNEZnNkF1wiOuGklm3bC8dk="
+      AUTH_SECRET: "ZI39UlR2sN6HFZauuze0iNEZnNkF1wiOuGklm3bC8dk="
 
     # Health check probes
     readinessProbe: {}
@@ -154,8 +161,9 @@ deployments:
     
     env:
       PORT: "3000"
-      ORG: "on-prem-org"
       LOG_LEVEL: "info"
+      AUTH_SECRET: "ZI39UlR2sN6HFZauuze0iNEZnNkF1wiOuGklm3bC8dk="
+
 
     # Health check probes
     readinessProbe: {}
@@ -211,12 +219,14 @@ deployments:
     
     env:
       PORT: "3000"
-      ORG: "on-prem-org"
-      ON_PREM: "true"
       DEBUG_QUERIES: "true"
       POSTGRES_HOST_AUTH_METHOD: "trust"
       RATE_LIMIT_MAX: "1000"
       RATE_LIMIT_WINDOW: "60000"
+      # DATABASE_URL: "postgres://postgres:postgres@webrix-postgresql:5432/postgres?sslmode=disable"
+      AUTH_SECRET: "ZI39UlR2sN6HFZauuze0iNEZnNkF1wiOuGklm3bC8dk="
+      AUTO_AUTHENTICATE_TOKEN: "balQgAqCpKW979XoibTYSbfCjvj7uSJK+90m0iQG5"
+      ENCRYPTION_KEY: "iL7wUJhqRMPFY0asXqLAn1JjW9kv0OqC4NHtqKHt5VY="
 
     # Health check probes
     readinessProbe:
@@ -236,25 +246,12 @@ deployments:
       timeoutSeconds: 5
       failureThreshold: 3
     
-    extraEnv:
-      DATABASE_URL: "postgres://postgres:postgres@webrix-postgresql:5432/postgres?sslmode=disable"
-    
     ingress:
-      enabled: true
-      className: "nginx"
-      annotations:
-        nginx.ingress.kubernetes.io/rewrite-target: /
-      subdomain: "webrix-dbservice"
-      path: "/"
-      pathType: "Prefix"
-      tls: []
-
-# Shared environment variables
-
+      enabled: false
 
 # PostgreSQL configuration
 postgresql:
-  enabled: true
+  enabled: false
   global:
     security:
       allowInsecureImages: true

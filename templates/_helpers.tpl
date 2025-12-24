@@ -57,11 +57,11 @@ Return the database URL based on provider
 {{- define "webrix.databaseUrl" -}}
 {{- if eq .Values.global.db_provider "postgresql" -}}
 {{- $postgresHost := .Values.postgresql.fullnameOverride | default (printf "%s-postgresql" .Release.Name) -}}
-{{- $postgresUser := .Values.postgresql.auth.postgresUsername | default "postgres" -}}
-{{- $postgresPassword := .Values.postgresql.auth.postgresPassword | default "postgres" -}}
+{{- $username := .Values.postgresql.auth.username | default "postgres" -}}
+{{- $password := .Values.postgresql.auth.postgresPassword | default "postgres" -}}
 {{- $postgresPort := (.Values.postgresql.service.ports.postgresql | default 5432) | int -}}
 {{- $postgresDatabase := .Values.postgresql.auth.database | default "postgres" -}}
-{{- printf "postgres://%s:%s@%s:%d/%s?sslmode=disable" $postgresUser $postgresPassword $postgresHost $postgresPort $postgresDatabase -}}
+{{- printf "postgres://%s:%s@%s:%d/%s?sslmode=disable" $username $password $postgresHost $postgresPort $postgresDatabase -}}
 {{- else -}}
 {{- .Values.externalDatabase.url | default (printf "postgres://%s:%s@%s:%d/%s?sslmode=%s" .Values.externalDatabase.username .Values.externalDatabase.password .Values.externalDatabase.host (.Values.externalDatabase.port | int) .Values.externalDatabase.database .Values.externalDatabase.sslMode) -}}
 {{- end -}}
