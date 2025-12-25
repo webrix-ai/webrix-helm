@@ -42,6 +42,10 @@ spec:
             - secretRef:
                 name: {{ $serviceConfig.secretName }}
             {{- end }}
+            {{- if $serviceConfig.sealedsecret }}
+            - secretRef:
+                name: {{ $serviceName }}
+            {{- end }}
           resources:
             {{- toYaml $serviceConfig.resources | nindent 12 }}
           {{- with $serviceConfig.readinessProbe }}

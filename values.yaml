@@ -57,6 +57,10 @@ deployments:
       PORT: "3000"
       DB_AUTH_SECRET: "ZI39UlR2sN6HFZauuze0iNEZnNkF1wiOuGklm3bC8dk="
       AUTH_SECRET: "aUi2V5iCVqUrbrdjKty1zH4HCqszXArV9BLVU2giqhY="
+    
+    # Optional: SealedSecret configuration
+    # sealedsecret:
+    #   KEY: "encrypted-value"
 
     # Health check probes
     readinessProbe: {}

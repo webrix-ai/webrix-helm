@@ -13,6 +13,8 @@ deployments:
   app:
     ingress:
       subdomain: "onprem-app"
+    sealedsecret:
+      MYTEST: AgCIqJoZbXyTxccHVSXPOehulIdeUnQuDOquUsY25z+ypWr04Am1eNBqe9OY7CCLdVNe5t2Ir28fpKM6O2r3Mv3NOeri396ZGU/hplITNc/gUUfmuzNEtDJ6gc7xG+VcqXTRc6vpF0fYe5wCQzomnLjh6ENVHJVIJHkNFOCldW8X/MeFrYPcHyb0fool8qHkJDkbNTAJZW51PtPb+YGS4ZFwhbWWBuQ7KbN2bDU25B/dDIATFvETblI1u/EdqdjEMF8QXdcE8TSLGl5f4/pJMIz7xx8H6ehR2wHnlGoHvaSKXln21Oqhv+NEWrt3/uKlqs6YPDtw5EA4RgGSb/0h2SwsgWHDFieWzPU6vpTM3g5RbipxvCmBIxXPjybPdac9g1tgj2XDd+tozRBa9C5OO4z/IlLTKNVWvW+k2ij/T1LO4D5O+9afZFtcSvD5eRlj/XWAtizUJmVx2Uz+0X8rQXS2dUveLb9Y0DZab8zMEbL5pSpxjEDFex/ElWVuznH7hu+mT6FyDEaZOZ3ERWXHYDzTprmIpWWPpOGALh5Zhl5af8JqWHpiAvY5br+CdBq/HXt8nQHDgx5es5jq542vRR6yS0kVNH7tlj9TGQ3vj66zItkfRCvfeClwY+2+CMhnfPyY3eICEJkpB8priQqY2CtUKhcw5/ySIa67o2AKlyTrVDKh0JmSjHvse15qN5SZCoflox8HrbCTqmE0zFFqMg==
  
   connect:
     ingress:
