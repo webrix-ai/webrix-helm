@@ -9,12 +9,6 @@ on:
       - 'values.yaml'
       - 'templates/**'
   workflow_dispatch:
-    inputs:
-      auto_bump:
-        description: 'Auto-bump patch version if exists'
-        required: false
-        type: boolean
-        default: true
 
 permissions:
   contents: write
@@ -29,146 +23,58 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Configure Git
         run: |
-          git config user.name "$GITHUB_ACTOR"
-          git config user.email "$GITHUB_ACTOR@users.noreply.github.com"
-
-      - name: Auth GH CLI
-        run: gh auth setup-git
-        env:
-          GH_TOKEN: ${{ secrets.GHA_PAT }}
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
 
       - name: Install Helm
         uses: azure/setup-helm@v4
         with:
           version: v3.12.0
 
-      - name: Check and bump chart version
-        id: version_check
+      - name: Get chart version
+        id: chart_version
         run: |
           chart_name=$(grep '^name:' Chart.yaml | awk '{print $2}')
           chart_version=$(grep '^version:' Chart.yaml | awk '{print $2}')
           
           echo "📋 Chart: $chart_name"
-          echo "📄 Chart.yaml version: $chart_version"
+          echo "📦 Version: $chart_version"
           
-          # Get the latest release tag from the repository
-          latest_release_tag=$(gh api repos/${{ github.repository }}/tags --jq '.[0].name' 2>/dev/null || echo "")
-          
-          if [ -z "$latest_release_tag" ]; then
-            echo "ℹ️  No existing releases found, using Chart.yaml version: $chart_version"
-            new_version="$chart_version"
-          else
-            # Remove 'v' prefix if present
-            latest_version=$(echo "$latest_release_tag" | sed 's/^v//')
-            echo "📦 Latest release found: $latest_release_tag (version: $latest_version)"
-            
-            # Bump patch version from latest release
-            IFS='.' read -r major minor patch <<< "$latest_version"
-            new_version="$major.$minor.$((patch + 1))"
-            echo "🔄 Bumping to new version: $new_version"
-          fi
-          
-          # Update Chart.yaml with the new version
-          if [ "$new_version" != "$chart_version" ]; then
-            echo "📝 Updating Chart.yaml from $chart_version to $new_version"
-            sed -i "s/^version: .*/version: $new_version/" Chart.yaml
-            
-            git add Chart.yaml
-            git commit -m "chore: bump $chart_name to $new_version [skip ci]"
-            git push
-            echo "✅ Chart.yaml updated and committed"
-          else
-            echo "ℹ️  Chart.yaml version is already up to date"
-          fi
-          
-          # Export for later steps
-          echo "chart_name=$chart_name" >> $GITHUB_OUTPUT
-          echo "version=$new_version" >> $GITHUB_OUTPUT
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Update image tags from latest tags
-        run: |
-          echo "🔄 Updating image tags from latest GitHub tags..."
-          
-          # Function to get latest tag
-          get_latest_tag() {
-            local repo=$1
-            # Get tags sorted by creation time (most recent first), take the first one
-            gh api "repos/$repo/tags?per_page=1" --jq '.[0].name' 2>/dev/null || echo "latest"
-          }
-          
-          # Repository mappings
-          declare -A repo_mapping=(
-            ["app"]="webrix-ai/mcp-s-app"
-            ["run"]="webrix-ai/mcp-s-run"
-            ["connect"]="webrix-ai/mcp-s-connect"
-            ["dbService"]="webrix-ai/mcp-s-db-service"
-          )
-          
-          # Update image tags for each service
-          for service in "${!repo_mapping[@]}"; do
-            repo="${repo_mapping[$service]}"
-            echo "📦 Checking latest tag for $service (repo: $repo)..."
-            
-            latest_tag=$(get_latest_tag "$repo")
-            echo "🏷️  Latest tag for $service: $latest_tag"
-            
-            if [ "$latest_tag" != "latest" ]; then
-              # Remove 'v' prefix if present
-              clean_tag=$(echo "$latest_tag" | sed 's/^v//')
-              
-              # Update the image tag in values.yaml for the specific service
-              # Use awk to update only the tag within the specific service section
-              awk -v service="$service" -v new_tag="$clean_tag" '
-                BEGIN { in_service = 0 }
-                /^deployments:/ { in_deployments = 1; next }
-                in_deployments && /^  [a-zA-Z]/ && !/^  '$service':/ { in_service = 0 }
-                in_deployments && /^  '$service':/ { in_service = 1; print; next }
-                in_service && /^    tag:/ { print "    tag: \"" new_tag "\""; next }
-                { print }
-              ' values.yaml > values.yaml.tmp && mv values.yaml.tmp values.yaml
-              
-              echo "✅ Updated $service image tag to: $clean_tag"
-            else
-              echo "⚠️  Could not fetch latest tag for $service, keeping current tag"
-            fi
-          done
-          
-          # Show the changes
-          echo "📋 Updated image tags:"
-          grep -A 1 "repository: quay.io/webrix/mcp-s-" values.yaml || echo "No image repositories found"
-        env:
-          GH_TOKEN: ${{ secrets.GHA_PAT }}
-
-      - name: Commit updated image tags
-        run: |
-          if git diff --quiet values.yaml; then
-            echo "ℹ️  No changes to commit in values.yaml"
-          else
-            echo "📝 Committing updated image tags..."
-            git add values.yaml
-            git commit -m "chore: update image tags from latest releases [skip ci]"
-            git push
-            echo "✅ Image tags updated and committed"
-          fi
-
-      - name: Pull latest commit after version bump
-        run: |
-          git fetch origin main
-          git reset --hard origin/main
+          echo "name=$chart_name" >> $GITHUB_OUTPUT
+          echo "version=$chart_version" >> $GITHUB_OUTPUT
 
       - name: Build chart dependencies
         run: |
-          helm dependency build
+          echo "🔨 Building chart dependencies..."
+          if [ -f "Chart.lock" ]; then
+            helm dependency build
+            echo "✅ Dependencies built"
+          else
+            echo "ℹ️  No dependencies to build"
+          fi
 
       - name: Run chart-releaser
         uses: helm/chart-releaser-action@v1.7.0
         with:
           charts_dir: .
+          skip_existing: true
         env:
           CR_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
+
+      - name: Release summary
+        run: |
+          echo "## 🎉 Helm Chart Released!" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Chart:** ${{ steps.chart_version.outputs.name }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Version:** v${{ steps.chart_version.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Repository:** https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📦 Installation" >> $GITHUB_STEP_SUMMARY
+          echo '```bash' >> $GITHUB_STEP_SUMMARY
+          echo "helm repo add ${{ steps.chart_version.outputs.name }} https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}" >> $GITHUB_STEP_SUMMARY
+          echo "helm repo update" >> $GITHUB_STEP_SUMMARY
+          echo "helm install my-release ${{ steps.chart_version.outputs.name }}/${{ steps.chart_version.outputs.name }}" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
