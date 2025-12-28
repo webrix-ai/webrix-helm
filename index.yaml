@@ -14,7 +14,7 @@ entries:
       tanzuCategory: service
     apiVersion: v2
     appVersion: 17.5.0
-    created: "2025-12-28T09:45:06.872592374Z"
+    created: "2025-12-28T09:48:11.796218972Z"
     dependencies:
     - name: common
       repository: oci://registry-1.docker.io/bitnamicharts
@@ -41,9 +41,24 @@ entries:
     sources:
     - https://github.com/bitnami/charts/tree/main/bitnami/postgresql
     urls:
-    - https://github.com/webrix-ai/webrix-helm/releases/download/v0.1.34/charts/postgresql-16.7.12.tgz
+    - https://github.com/webrix-ai/webrix-helm/releases/download/v0.1.35/charts/postgresql-16.7.12.tgz
     version: 16.7.12
   webrix-helm:
+  - apiVersion: v2
+    created: "2025-12-28T09:48:11.791503598Z"
+    dependencies:
+    - condition: postgresql.enabled
+      name: postgresql
+      repository: oci://registry-1.docker.io/bitnamicharts
+      version: 16.7.12
+    description: A unified Helm chart for deploying all Webrix services (app, connect,
+      run, db-service)
+    digest: e74eef6c57c4f645cd797e39ecb2a8d9331b90840f5d6eb442fde51f23888c90
+    name: webrix-helm
+    type: application
+    urls:
+    - https://github.com/webrix-ai/webrix-helm/releases/download/v0.1.35/.cr-release-packages/webrix-helm-0.1.35.tgz
+    version: 0.1.35
   - apiVersion: v2
     created: "2025-12-28T09:45:06.867724782Z"
     dependencies:
@@ -554,4 +569,4 @@ entries:
     urls:
     - webrix-helm-0.1.0.tgz
     version: 0.1.0
-generated: "2025-12-28T09:45:06.847037038Z"
+generated: "2025-12-28T09:48:11.778365904Z"
