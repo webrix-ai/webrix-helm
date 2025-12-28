@@ -4,10 +4,12 @@ on:
   push:
     branches:
       - main
+      - 'web-**'  # TEMPORARY: For testing - remove before merging to main
     paths:
       - 'Chart.yaml'
       - 'values.yaml'
       - 'templates/**'
+      - '.github/workflows/release-chart.yml'  # TEMPORARY: trigger on workflow changes
   workflow_dispatch:
 
 permissions:
@@ -46,7 +48,21 @@ jobs:
           echo "name=$chart_name" >> $GITHUB_OUTPUT
           echo "version=$chart_version" >> $GITHUB_OUTPUT
 
+      - name: Check if release already exists
+        id: check_release
+        run: |
+          if gh release view "v${{ steps.chart_version.outputs.version }}" &> /dev/null; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+            echo "ℹ️  Release v${{ steps.chart_version.outputs.version }} already exists"
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+            echo "✅ Release v${{ steps.chart_version.outputs.version }} does not exist, will create"
+          fi
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Build chart dependencies
+        if: steps.check_release.outputs.exists == 'false'
         run: |
           echo "🔨 Building chart dependencies..."
           if [ -f "Chart.lock" ]; then
@@ -56,25 +72,80 @@ jobs:
             echo "ℹ️  No dependencies to build"
           fi
 
-      - name: Run chart-releaser
-        uses: helm/chart-releaser-action@v1.7.0
-        with:
-          charts_dir: .
-          skip_existing: true
+      - name: Package Helm chart
+        if: steps.check_release.outputs.exists == 'false'
+        run: |
+          echo "📦 Packaging chart..."
+          helm package . --destination .cr-release-packages
+          echo "✅ Chart packaged"
+          ls -lh .cr-release-packages/
+
+      - name: Create GitHub Release
+        if: steps.check_release.outputs.exists == 'false'
+        run: |
+          echo "🚀 Creating GitHub release..."
+          gh release create "v${{ steps.chart_version.outputs.version }}" \
+            .cr-release-packages/*.tgz \
+            --title "Release v${{ steps.chart_version.outputs.version }}" \
+            --notes "Helm chart release for version ${{ steps.chart_version.outputs.version }}"
+          echo "✅ Release created"
         env:
-          CR_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Checkout gh-pages branch
+        if: steps.check_release.outputs.exists == 'false'
+        run: |
+          git fetch origin gh-pages
+          git checkout gh-pages
+          # Clean up the package directory from the previous branch
+          rm -rf .cr-release-packages
+
+      - name: Update Helm repository index
+        if: steps.check_release.outputs.exists == 'false'
+        run: |
+          echo "📝 Updating repository index..."
+          
+          # Download the packaged chart from the release
+          mkdir -p .cr-release-packages
+          gh release download "v${{ steps.chart_version.outputs.version }}" \
+            --pattern "*.tgz" \
+            --dir .cr-release-packages
+          
+          # Move the chart to root for indexing (so URL doesn't include .cr-release-packages/)
+          mv .cr-release-packages/*.tgz .
+          
+          # Generate/update index.yaml
+          helm repo index . --url https://github.com/${{ github.repository }}/releases/download/v${{ steps.chart_version.outputs.version }} --merge index.yaml
+          
+          echo "✅ Index updated"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Commit and push index
+        if: steps.check_release.outputs.exists == 'false'
+        run: |
+          git add index.yaml
+          git commit -m "Update index for v${{ steps.chart_version.outputs.version }}"
+          git push origin gh-pages
+          echo "✅ Index pushed to gh-pages"
 
       - name: Release summary
         run: |
-          echo "## 🎉 Helm Chart Released!" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Chart:** ${{ steps.chart_version.outputs.name }}" >> $GITHUB_STEP_SUMMARY
-          echo "**Version:** v${{ steps.chart_version.outputs.version }}" >> $GITHUB_STEP_SUMMARY
-          echo "**Repository:** https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### 📦 Installation" >> $GITHUB_STEP_SUMMARY
-          echo '```bash' >> $GITHUB_STEP_SUMMARY
-          echo "helm repo add ${{ steps.chart_version.outputs.name }} https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}" >> $GITHUB_STEP_SUMMARY
-          echo "helm repo update" >> $GITHUB_STEP_SUMMARY
-          echo "helm install my-release ${{ steps.chart_version.outputs.name }}/${{ steps.chart_version.outputs.name }}" >> $GITHUB_STEP_SUMMARY
-          echo '```' >> $GITHUB_STEP_SUMMARY
+          if [ "${{ steps.check_release.outputs.exists }}" == "true" ]; then
+            echo "## ℹ️  Release Already Exists" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "Version **v${{ steps.chart_version.outputs.version }}** was already released." >> $GITHUB_STEP_SUMMARY
+          else
+            echo "## 🎉 Helm Chart Released!" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "**Chart:** ${{ steps.chart_version.outputs.name }}" >> $GITHUB_STEP_SUMMARY
+            echo "**Version:** v${{ steps.chart_version.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+            echo "**Repository:** https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### 📦 Installation" >> $GITHUB_STEP_SUMMARY
+            echo '```bash' >> $GITHUB_STEP_SUMMARY
+            echo "helm repo add ${{ steps.chart_version.outputs.name }} https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}" >> $GITHUB_STEP_SUMMARY
+            echo "helm repo update" >> $GITHUB_STEP_SUMMARY
+            echo "helm install my-release ${{ steps.chart_version.outputs.name }}/${{ steps.chart_version.outputs.name }}" >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+          fi
