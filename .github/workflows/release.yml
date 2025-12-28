@@ -4,12 +4,8 @@ on:
   push:
     branches:
       - main
-      - 'web-**'  # TEMPORARY: For testing - remove before merging to main
     paths:
       - 'Chart.yaml'
-      - 'values.yaml'
-      - 'templates/**'
-      - '.github/workflows/release-chart.yml'  # TEMPORARY: trigger on workflow changes
   workflow_dispatch:
 
 permissions:
@@ -116,6 +112,10 @@ jobs:
           
           # Generate/update index.yaml
           helm repo index . --url https://github.com/${{ github.repository }}/releases/download/v${{ steps.chart_version.outputs.version }} --merge index.yaml
+          
+          # Clean up the .tgz file (we don't need it in gh-pages, it's in the GitHub release)
+          rm -f *.tgz
+          rm -rf .cr-release-packages
           
           echo "✅ Index updated"
         env:
