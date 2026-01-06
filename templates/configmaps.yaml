@@ -1,0 +1,59 @@
+{{- range $serviceName, $serviceConfig := .Values.deployments }}
+{{- if $serviceConfig.enabled }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ printf "%s-config" $serviceName | lower }}
+  namespace: {{ $.Release.Namespace }}
+  labels:
+    {{- include "webrix.labels" $ | nindent 4 }}
+    app: {{ $serviceName }}
+data:
+  {{- if eq $serviceName "db-service" }}
+  DATABASE_URL: {{ include "webrix.databaseUrl" $ | quote }}
+  {{- end }}
+
+  {{- range $key, $value := $serviceConfig.env }}
+  {{- if not (and (eq $serviceName "db-service") (eq $key "DATABASE_URL")) }}
+  {{ $key }}: {{ $value | quote }}
+  {{- end }}
+  {{- end }}
+
+  {{- range $key, $value := $.Values.global.sharedEnv }}
+  {{ $key }}: {{ $value | quote }}
+  {{- end }}
+
+  {{- if or (eq $serviceName "app") (eq $serviceName "connect") }}
+  AUTH_SECRET: {{ $.Values.global.authSecret | quote }}
+  DB_AUTH_SECRET: {{ $.Values.global.dbAuthSecret | quote }}
+  {{- end }}
+
+  {{- if or (eq $serviceName "db-service") (eq $serviceName "run") }}
+  AUTH_SECRET: {{ $.Values.global.dbAuthSecret | quote }}
+  {{- end }}
+
+  {{- if eq $serviceName "app" }}
+  AUTH_URL: "https://{{ $.Values.deployments.app.ingress.subdomain }}.{{ $.Values.global.domain.host }}"
+  NEXTAUTH_URL: "https://{{ $.Values.deployments.app.ingress.subdomain }}.{{ $.Values.global.domain.host }}"
+  {{- end }}
+
+  {{- if eq $serviceName "connect" }}
+  AUTH_URL: "https://{{ $.Values.deployments.connect.ingress.subdomain }}.{{ $.Values.global.domain.host }}"
+  NEXTAUTH_URL: "https://{{ $.Values.deployments.connect.ingress.subdomain }}.{{ $.Values.global.domain.host }}"
+  {{- end }}
+
+  {{- if eq $serviceName "run" }}
+  BASE_URL: "https://{{ $.Values.deployments.run.ingress.subdomain }}.{{ $.Values.global.domain.host }}"
+  {{- end }}
+
+  APP_URL: "https://{{ $.Values.deployments.app.ingress.subdomain }}.{{ $.Values.global.domain.host }}"
+  CONNECT_URL: "https://{{ $.Values.deployments.connect.ingress.subdomain }}.{{ $.Values.global.domain.host }}"
+  RUN_URL: "https://{{ $.Values.deployments.run.ingress.subdomain }}.{{ $.Values.global.domain.host }}"
+  DB_SERVICE_URL: "http://db-service"
+  DB_BASE_URL: "http://db-service"
+  ON_PREM: {{ $.Values.global.ON_PREM | default true | quote }}
+  ORG: {{ $.Values.global.ORG | default "on-prem-org" | quote }}
+  OPENAI_API_KEY: {{ $.Values.global.OPENAI_API_KEY | quote }}
+{{- end }}
+{{- end }}

@@ -1,0 +1,13 @@
+global:
+  domain:
+    host: "example.com"
+
+# Default subdomains: webrix-admin, webrix-dashboard, webrix
+
+# deployments:
+#   app:
+#     AUTH_PROVIDER=xxx
+#     AUTH_xxx_ID=
+#     AUTH_xxx_ISSUER=
+#     AUTH_xxx_SECRET=
+
