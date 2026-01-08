@@ -39,7 +39,7 @@ deployments:
     resources:
       requests:
         cpu: 100m
-        memory: 200Mi
+        memory: 256Mi
       limits:
         cpu: 1000m
         memory: 2048Mi
@@ -93,11 +93,11 @@ deployments:
 
     resources:
       requests:
-        cpu: 100m
-        memory: 200Mi
+        cpu: 500m
+        memory: 500Mi
       limits:
         cpu: 1000m
-        memory: 2048Mi
+        memory: 4048Mi
 
     nodeSelector: {}
     tolerations: []
@@ -131,7 +131,7 @@ deployments:
 
   run:
     enabled: true
-    replicas: 1
+    replicas: 4
     image:
       repository: "quay.io/webrix/mcp-s-run"
       tag: "latest"
@@ -142,11 +142,11 @@ deployments:
 
     resources:
       requests:
-        cpu: 100m
-        memory: 200Mi
-      limits:
         cpu: 1000m
-        memory: 2048Mi
+        memory: 500Mi
+      limits:
+        cpu: 2000m
+        memory: 8192Mi
 
     nodeSelector: {}
     tolerations: []
@@ -180,7 +180,7 @@ deployments:
 
   db-service:
     enabled: true
-    replicas: 1
+    replicas: 3
     image:
       repository: "quay.io/webrix/mcp-s-db-service"
       tag: "latest"
@@ -198,11 +198,11 @@ deployments:
 
     resources:
       requests:
-        cpu: 100m
-        memory: 200Mi
-      limits:
         cpu: 1000m
-        memory: 2048Mi
+        memory: 500Mi
+      limits:
+        cpu: 2000m
+        memory: 8192Mi
 
     nodeSelector: {}
     tolerations: []
