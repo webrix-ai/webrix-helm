@@ -12,11 +12,30 @@ This chart provides a flexible configuration to deploy either a full stack with 
 
 ## Installation
 
+### Prerequisites
+
+Since you're using private container images, you'll need to create an image pull secret first:
+
+```bash
+kubectl create secret docker-registry webrix-registry \
+  --namespace <namespace> \
+  --docker-server=quay.io \
+  --docker-username=<robot-username> \
+  --docker-password=<robot-token> \
+  --docker-email=unused@webrix.io
+```
+
+### Install the Chart
+
 To install the chart with the release name :
 
 To install with a custom values file:
 
 ## Configuration
+
+The following table lists the configurable parameters of the Webrix chart and their default values.
+
+### Configuration Parameters
 
 The following table lists the configurable parameters of the Webrix chart and their default values.
 

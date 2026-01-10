@@ -25,6 +25,10 @@ spec:
         {{- end }}
     spec:
       serviceAccountName: {{ printf "%s-sa" $serviceName | lower }}
+      {{- with (coalesce $serviceConfig.imagePullSecrets $.Values.global.imagePullSecrets) }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
       containers:
         - name: {{ $serviceName | lower }}
           image: "{{ $serviceConfig.image.repository }}:{{ $serviceConfig.image.tag }}"

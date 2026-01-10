@@ -22,8 +22,25 @@ global:
   # Common annotations applied to all resources
   annotations: {}
 
+  # Image pull secrets for private container registries
+  # Used when pulling images from private registries.
+  # Create the secret first using:
+  # kubectl create secret docker-registry webrix-registry \
+  #   --namespace <namespace> \
+  #   --docker-server=quay.io \
+  #   --docker-username=<robot-username> \
+  #   --docker-password=<robot-token> \
+  #   --docker-email=unused@webrix.io
+  imagePullSecrets:
+    - name: webrix-registry
+
   sharedEnv: {}
 # Application deployments configuration
+# Each service supports the following configuration options:
+#   imagePullSecrets: [] - Override global imagePullSecrets for this service
+#     Example:
+#     imagePullSecrets:
+#       - name: my-custom-registry-secret
 deployments:
   app:
     enabled: true
